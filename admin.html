@@ -249,6 +249,9 @@
     cursor:pointer;
     margin-top:6px;
   }
+
+/* Added management controls */
+.top-actions{display:flex;gap:8px;align-items:center}.danger{background:#B33A2B!important;color:#fff}.warning{background:var(--sun);color:#3b2b00}.search{width:100%;padding:12px;border-radius:12px;border:1px solid #ddd;margin-bottom:12px}.mini{padding:7px 10px;margin:4px 4px 0 0}.timer{font-weight:700;color:var(--coral);font-size:13px}.super{background:#2C2B47;color:white;padding:12px;border-radius:12px;margin-bottom:12px}
 </style>
 </head>
 <body>
@@ -258,6 +261,7 @@
     <div class="title">Panel de Administración</div>
     <div class="date" id="todayLabel"></div>
   </div>
+  <div class="top-actions"><button class="btn mini warning" onclick="resetDay()">Reiniciar día</button><button class="btn mini" onclick="superAdminLogin()">Super Admin</button></div>
 </header>
 
 <div class="tabs">
@@ -271,7 +275,7 @@
 
   <!-- PEDIDOS -->
   <div class="panel active" id="panel-pedidos">
-    <div id="ordersList"></div>
+    <input class="search" id="orderSearch" placeholder="Buscar pedidos…" oninput="renderOrders()"><div id="ordersList"></div>
   </div>
 
   <!-- INVENTARIO -->
@@ -328,7 +332,7 @@
 <script>
 // ---- CONFIGURE THESE TWO VALUES from your Supabase project settings ----
 const SUPABASE_URL = "https://puvdxldgotrnmlmxixqe.supabase.co";
-const SUPABASE_ANON_KEY = "sb_publishable_cWZ1N860dKUKvnivGEHlCQ_9ayMmHgy";
+const SUPABASE_ANON_KEY = "YOUR_SUPABASE_ANON_KEY";
 // --------------------------------------------------------------------
 
 const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
@@ -392,7 +396,8 @@ function renderOrders(){
   }
 
   list.innerHTML = '';
-  orders.forEach(order=>{
+  const q=(document.getElementById('orderSearch')?.value||'').toLowerCase();
+  orders.filter(order=>!q || String(order.id).toLowerCase().includes(q)).forEach(order=>{
     const lineItems = orderItemsMap[order.id] || [];
     const itemsText = lineItems.map(li=>{
       const item = items.find(i=>i.id === li.item_id);
@@ -409,7 +414,7 @@ function renderOrders(){
         ${order.is_preorder ? `<span class="pill pill-pre">Pedido anticipado · ${order.hours_from_now}h</span>` : ''}
         ${order.map_lat ? `<span class="pill pill-map" style="cursor:pointer;" onclick="showMap(${order.map_lat}, ${order.map_lng})">📍 Ver en mapa</span>` : ''}
         <div class="order-items">${itemsText}</div>
-        <div class="order-meta">${time} ${isDelivered ? '· Entregado' : '· Pendiente'}</div>
+        <div class="order-meta">${time} ${isDelivered ? '· Entregado' : '· Pendiente'} ${order.rental_end_at ? `<div class="timer" data-end="${order.rental_end_at}">⏳ calculando…</div>` : ''}</div>
         ${!isDelivered ? `
           <select class="worker-select" id="worker-${order.id}">
             <option value="">Asignar a trabajador…</option>
@@ -417,13 +422,22 @@ function renderOrders(){
           </select>
           <button class="btn btn-deliver" onclick="markDelivered('${order.id}')">Marcar como entregado</button>
         ` : ''}
+        <button class="btn mini warning" onclick="cancelOrder('${order.id}')">Cancelar</button>
+        <button class="btn mini danger" onclick="deleteOrder('${order.id}')">Eliminar</button>
       </div>
       <div class="order-total">$${order.total_price}</div>
     `;
     list.appendChild(card);
   });
+  updateTimers();
 }
 
+function updateTimers(){document.querySelectorAll('.timer[data-end]').forEach(el=>{const ms=Math.max(0,new Date(el.dataset.end)-Date.now()),h=Math.floor(ms/3600000),m=Math.floor(ms%3600000/60000),s=Math.floor(ms%60000/1000);el.textContent='⏳ '+String(h).padStart(2,'0')+':'+String(m).padStart(2,'0')+':'+String(s).padStart(2,'0');});}
+setInterval(updateTimers,1000);
+async function cancelOrder(id){if(!confirm('¿Cancelar este pedido?'))return;await sb.from('orders').update({status:'cancelled'}).eq('id',id);await loadOrders();}
+async function deleteOrder(id){if(!confirm('¿Eliminar permanentemente este pedido?'))return;await sb.from('order_items').delete().eq('order_id',id);await sb.from('orders').delete().eq('id',id);await loadOrders();}
+async function resetDay(){if(!confirm('Esto eliminará los pedidos de hoy del panel. ¿Continuar?'))return;for(const o of orders){await sb.from('order_items').delete().eq('order_id',o.id);await sb.from('orders').delete().eq('id',o.id);}await loadAll();}
+function superAdminLogin(){const p=prompt('Contraseña Super Admin');if(p==='beach2026'){document.querySelector('header').insertAdjacentHTML('afterend','<div class="super" id="superPanel"><strong>Super Admin activo</strong><br>Herramientas: recargar datos, limpiar sesión y diagnosticar conexión.<br><button class="btn mini" onclick="loadAll()">Recargar</button><button class="btn mini danger" onclick="document.getElementById(\'superPanel\').remove()">Salir</button></div>');}else if(p!==null)alert('Contraseña incorrecta');}
 async function markDelivered(orderId){
   const select = document.getElementById(`worker-${orderId}`);
   const workerId = select.value;
