@@ -721,18 +721,24 @@ async function changeSuperPassword(){
 
 async function resetAllData(){
   if(!isSuperAdmin) return;
-  if(!confirm('¿SEGURO? Esto borra TODOS los pedidos, trabajadores, mensajes y llamadas de servicio, y regresa el inventario completo. Esta acción no se puede deshacer.')) return;
-  if(!confirm('Última confirmación: ¿reiniciar todos los datos ahora?')) return;
-  await sb.from('messages').delete().neq('id', '00000000-0000-0000-0000-000000000000');
-  await sb.from('service_calls').delete().neq('id', '00000000-0000-0000-0000-000000000000');
-  await sb.from('order_items').delete().neq('id', '00000000-0000-0000-0000-000000000000');
-  await sb.from('orders').delete().neq('id', '00000000-0000-0000-0000-000000000000');
-  await sb.from('workers').delete().neq('id', '00000000-0000-0000-0000-000000000000');
-  for(const item of items){
-    await sb.from('items').update({ available_qty: item.total_qty }).eq('id', item.id);
+  if(!confirm('⚠️ BORRAR TODO: se eliminarán pedidos, artículos del inventario, trabajadores, mensajes y llamadas de servicio. La aplicación quedará vacía. ¿Continuar?')) return;
+  const phrase=prompt('Escribe BORRAR TODO para confirmar:');
+  if(phrase!=='BORRAR TODO'){ alert('Cancelado. No se borró nada.'); return; }
+  const tables=['messages','service_calls','order_items','orders','workers','items'];
+  for(const table of tables){
+    const {error}=await sb.from(table).delete().neq('id','00000000-0000-0000-0000-000000000000');
+    if(error){ alert('El reinicio se detuvo en '+table+': '+error.message); return; }
   }
-  await loadAll();
-  alert('Todos los datos han sido reiniciados.');
+  orders=[]; items=[]; workers=[]; orderItemsMap={}; openMsgOrderId=null;
+  localStorage.removeItem('beach_admin_tutorial_seen');
+  document.getElementById('ordersList').innerHTML='<div class="empty">No hay pedidos. El sistema está limpio.</div>';
+  renderOverhead();
+  renderInventory();
+  renderWorkers();
+  renderSummary();
+  updatePendingBadge();
+  alert('✅ Todo fue borrado. El administrador está completamente limpio y listo para configurarse de nuevo.');
+  showWizard();
 }
 
 // ---------------- REALTIME ----------------
