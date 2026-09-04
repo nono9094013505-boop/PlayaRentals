@@ -1,0 +1,50 @@
+name: Add full reset
+on:
+  push:
+    paths:
+      - '.github/workflows/full-reset.yml'
+permissions:
+  contents: write
+jobs:
+  patch-reset:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Add full wipe reset
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          import re
+          p=Path('admin.html')
+          s=p.read_text(encoding='utf-8')
+          new=r'''async function resetAllData(){
+            if(!isSuperAdmin) return;
+            if(!confirm('⚠️ BORRAR TODO: se eliminarán pedidos, artículos del inventario, trabajadores, mensajes y llamadas de servicio. La aplicación quedará vacía. ¿Continuar?')) return;
+            const phrase=prompt('Escribe BORRAR TODO para confirmar:');
+            if(phrase!=='BORRAR TODO'){ alert('Cancelado. No se borró nada.'); return; }
+            const tables=['messages','service_calls','order_items','orders','workers','items'];
+            for(const table of tables){
+              const {error}=await sb.from(table).delete().neq('id','00000000-0000-0000-0000-000000000000');
+              if(error){ alert('El reinicio se detuvo en '+table+': '+error.message); return; }
+            }
+            orders=[]; items=[]; workers=[]; orderItemsMap={}; openMsgOrderId=null;
+            localStorage.removeItem('beach_admin_tutorial_seen');
+            document.getElementById('ordersList').innerHTML='<div class="empty">No hay pedidos. El sistema está limpio.</div>';
+            renderOverhead();
+            renderInventory();
+            renderWorkers();
+            renderSummary();
+            updatePendingBadge();
+            alert('✅ Todo fue borrado. El administrador está completamente limpio y listo para configurarse de nuevo.');
+            showWizard();
+          }'''
+          s2,n=re.subn(r'async function resetAllData\(\)\{.*?\n\}\n\n// ---------------- REALTIME', new+'\n\n// ---------------- REALTIME', s, count=1, flags=re.S)
+          if n==1:
+              p.write_text(s2,encoding='utf-8')
+          else:
+              raise SystemExit('resetAllData function not found')
+          PY
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add admin.html
+          git diff --cached --quiet || (git commit -m 'Add full wipe reset to admin' && git push)
