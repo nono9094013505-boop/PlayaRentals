@@ -1,0 +1,43 @@
+name: Fix admin deployment
+on:
+  push:
+    paths:
+      - '.github/workflows/fix-admin.yml'
+permissions:
+  contents: write
+jobs:
+  patch-admin:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Patch admin.html
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          import re
+          p = Path('admin.html')
+          s = p.read_text(encoding='utf-8')
+          s = s.replace("const today = new Date().toISOString().slice(0,10);", "const today = new Intl.DateTimeFormat('en-CA',{year:'numeric',month:'2-digit',day:'2-digit'}).format(new Date());")
+          if '.inventory-sticky{' not in s:
+              s = s.replace('  .hidden{display:none !important;}\n', '  .inventory-sticky{position:sticky;top:59px;z-index:20;max-width:900px;margin:0 auto;padding:10px 16px;background:rgba(251,246,233,.98);border-bottom:1px solid #E8DDBF;display:flex;gap:8px;flex-wrap:wrap;}\n  .hidden{display:none !important;}\n')
+          s = s.replace('<div id="overheadBar" style="max-width:900px;margin:8px auto 0;padding:0 16px;display:flex;gap:8px;flex-wrap:wrap;"></div>', '<div id="overheadBar" class="inventory-sticky"></div>')
+          s = re.sub(r"async function deleteOrder\(orderId\)\{.*?\n\}\n\n// ---------------- MESSAGES", """async function deleteOrder(orderId){
+  if(!confirm('Delete this order? This cannot be undone.')) return;
+  for(const table of ['messages','service_calls','order_items']){
+    const {error} = await sb.from(table).delete().eq('order_id', orderId);
+    if(error){ alert('Delete failed: '+error.message); return; }
+  }
+  const {error} = await sb.from('orders').delete().eq('id', orderId);
+  if(error){ alert('Delete failed: '+error.message); return; }
+  await loadOrders();
+}
+
+// ---------------- MESSAGES""", s, count=1, flags=re.S)
+          p.write_text(s, encoding='utf-8')
+          PY
+      - name: Commit patched admin
+        run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add admin.html
+          git diff --cached --quiet || (git commit -m 'Fix and deploy admin page' && git push)
