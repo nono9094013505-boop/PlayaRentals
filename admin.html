@@ -1,0 +1,624 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1">
+<title>Panel de Administración — Playa</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:wght@500;600;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --sand:#EDE3CE;
+    --teal:#0E5C63;
+    --teal-deep:#0A4348;
+    --coral:#E9633B;
+    --ink:#1F2A28;
+    --sun:#F4B740;
+    --white:#FFFFFF;
+    --green:#3E9A5D;
+    --grey:#8A968F;
+  }
+  *{box-sizing:border-box;}
+  body{
+    margin:0;
+    background:#F6F2E8;
+    font-family:'Inter',sans-serif;
+    color:var(--ink);
+    padding-bottom:40px;
+  }
+  header{
+    background:var(--teal-deep);
+    color:var(--white);
+    padding:20px;
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    position:sticky;top:0;z-index:10;
+  }
+  header .title{
+    font-family:'Fraunces',serif;
+    font-weight:700;
+    font-size:20px;
+  }
+  header .date{
+    font-size:13px;
+    opacity:0.75;
+    margin-top:2px;
+  }
+  .tabs{
+    display:flex;
+    gap:6px;
+    padding:14px 16px 0;
+    max-width:900px;
+    margin:0 auto;
+    flex-wrap:wrap;
+  }
+  .tab{
+    padding:10px 16px;
+    border-radius:12px;
+    background:var(--white);
+    font-weight:600;
+    font-size:14px;
+    cursor:pointer;
+    color:var(--teal-deep);
+    border:1px solid transparent;
+    position:relative;
+  }
+  .tab.active{
+    background:var(--teal);
+    color:var(--white);
+  }
+  .badge{
+    background:var(--coral);
+    color:white;
+    font-size:11px;
+    font-weight:700;
+    border-radius:999px;
+    padding:1px 7px;
+    margin-left:6px;
+  }
+  main{
+    max-width:900px;
+    margin:0 auto;
+    padding:16px;
+  }
+  .panel{display:none;}
+  .panel.active{display:block;}
+  .card{
+    background:var(--white);
+    border-radius:16px;
+    padding:16px;
+    margin-bottom:14px;
+    box-shadow:0 3px 12px rgba(31,42,40,0.06);
+  }
+  .section-title{
+    font-family:'Fraunces',serif;
+    font-weight:600;
+    font-size:17px;
+    color:var(--teal-deep);
+    margin:20px 0 10px;
+  }
+  .order-card{
+    display:flex;
+    justify-content:space-between;
+    align-items:flex-start;
+    gap:12px;
+  }
+  .order-left{flex:1;}
+  .order-items{font-size:14px;margin:6px 0;}
+  .order-meta{font-size:12px;color:var(--grey);}
+  .order-total{
+    font-family:'Fraunces',serif;
+    font-weight:700;
+    font-size:18px;
+    color:var(--teal-deep);
+    white-space:nowrap;
+  }
+  .pill{
+    display:inline-block;
+    font-size:11px;
+    font-weight:700;
+    padding:3px 9px;
+    border-radius:999px;
+    margin-right:6px;
+  }
+  .pill-pre{background:#FCE9D0;color:#95591A;}
+  .pill-map{background:#DCEFEE;color:var(--teal-deep);}
+  select.worker-select{
+    margin-top:8px;
+    padding:8px 10px;
+    border-radius:10px;
+    border:1px solid #DDD3BB;
+    font-family:'Inter',sans-serif;
+    font-size:13px;
+    width:100%;
+  }
+  .btn{
+    border:none;
+    border-radius:10px;
+    padding:10px 14px;
+    font-weight:700;
+    font-size:13px;
+    cursor:pointer;
+    margin-top:8px;
+  }
+  .btn-deliver{background:var(--green);color:white;width:100%;}
+  .btn-deliver:disabled{background:#C9D6CC;cursor:not-allowed;}
+  .empty{
+    text-align:center;
+    padding:40px 20px;
+    color:var(--grey);
+    font-size:14px;
+  }
+  .inv-row{
+    display:flex;
+    justify-content:space-between;
+    align-items:center;
+    padding:12px 0;
+    border-bottom:1px solid #F0E9D8;
+  }
+  .inv-row:last-child{border-bottom:none;}
+  .inv-name{font-weight:600;font-size:15px;}
+  .inv-sub{font-size:12px;color:var(--grey);margin-top:2px;}
+  .stepper{display:flex;align-items:center;gap:10px;}
+  .stepper button{
+    width:32px;height:32px;
+    border-radius:8px;
+    border:none;
+    background:var(--sand);
+    font-weight:700;
+    font-size:16px;
+    cursor:pointer;
+  }
+  .return-btn{
+    background:#EAF1F0;
+    color:var(--teal-deep);
+    border:none;
+    border-radius:8px;
+    padding:6px 10px;
+    font-size:12px;
+    font-weight:700;
+    cursor:pointer;
+  }
+  .worker-row{
+    display:flex;
+    justify-content:space-between;
+    align-items:center;
+    padding:12px 0;
+    border-bottom:1px solid #F0E9D8;
+  }
+  .worker-row:last-child{border-bottom:none;}
+  .worker-name{font-weight:600;}
+  .worker-cash{
+    font-family:'Fraunces',serif;
+    font-weight:700;
+    color:var(--teal-deep);
+  }
+  .worker-sub{font-size:12px;color:var(--grey);}
+  .remove-btn{
+    background:none;border:none;color:var(--coral);
+    font-size:18px;cursor:pointer;padding:4px 8px;
+  }
+  .add-row{
+    display:flex;gap:8px;margin-top:12px;
+  }
+  .add-row input{
+    flex:1;
+    padding:12px;
+    border-radius:10px;
+    border:1px solid #DDD3BB;
+    font-size:14px;
+  }
+  .add-row button{
+    background:var(--teal);
+    color:white;
+    border:none;
+    border-radius:10px;
+    padding:12px 18px;
+    font-weight:700;
+    cursor:pointer;
+  }
+  .summary-grid{
+    display:grid;
+    grid-template-columns:1fr 1fr;
+    gap:10px;
+    margin-bottom:14px;
+  }
+  .stat{
+    background:var(--white);
+    border-radius:14px;
+    padding:14px;
+    text-align:center;
+  }
+  .stat .num{
+    font-family:'Fraunces',serif;
+    font-weight:700;
+    font-size:24px;
+    color:var(--teal-deep);
+  }
+  .stat .lbl{font-size:12px;color:var(--grey);margin-top:2px;}
+  .export-btn{
+    width:100%;
+    background:var(--coral);
+    color:white;
+    border:none;
+    border-radius:12px;
+    padding:14px;
+    font-weight:700;
+    font-size:15px;
+    cursor:pointer;
+    margin-top:6px;
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <div>
+    <div class="title">Panel de Administración</div>
+    <div class="date" id="todayLabel"></div>
+  </div>
+</header>
+
+<div class="tabs">
+  <div class="tab active" data-panel="pedidos" onclick="switchTab('pedidos')">Pedidos <span class="badge" id="pendingBadge" style="display:none;">0</span></div>
+  <div class="tab" data-panel="inventario" onclick="switchTab('inventario')">Inventario</div>
+  <div class="tab" data-panel="trabajadores" onclick="switchTab('trabajadores')">Trabajadores</div>
+  <div class="tab" data-panel="resumen" onclick="switchTab('resumen')">Resumen del día</div>
+</div>
+
+<main>
+
+  <!-- PEDIDOS -->
+  <div class="panel active" id="panel-pedidos">
+    <div id="ordersList"></div>
+  </div>
+
+  <!-- INVENTARIO -->
+  <div class="panel" id="panel-inventario">
+    <div class="card">
+      <div id="inventoryList"></div>
+    </div>
+    <div class="section-title">Agregar artículo nuevo</div>
+    <div class="card">
+      <div class="add-row">
+        <input type="text" id="newItemName" placeholder="Nombre (ej. Silla playera)">
+        <input type="number" id="newItemPrice" placeholder="Precio" style="max-width:90px;">
+      </div>
+      <div class="add-row">
+        <input type="number" id="newItemQty" placeholder="Cantidad total">
+        <button onclick="addItem()">Agregar</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- TRABAJADORES -->
+  <div class="panel" id="panel-trabajadores">
+    <div class="card">
+      <div id="workersList"></div>
+      <div class="add-row">
+        <input type="text" id="newWorkerName" placeholder="Nombre del trabajador">
+        <button onclick="addWorker()">Agregar</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- RESUMEN -->
+  <div class="panel" id="panel-resumen">
+    <div class="summary-grid" id="summaryStats"></div>
+    <div class="section-title">Efectivo por trabajador</div>
+    <div class="card">
+      <div id="workerTotals"></div>
+    </div>
+    <button class="export-btn" onclick="exportCSV()">Descargar resumen del día (CSV)</button>
+  </div>
+
+</main>
+
+<div id="mapModal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.6);z-index:999;align-items:center;justify-content:center;">
+  <div style="background:#fff;border-radius:16px;padding:14px;width:90%;max-width:420px;">
+    <div id="modalMap" style="width:100%;height:320px;border-radius:10px;"></div>
+    <button onclick="closeMap()" style="margin-top:10px;width:100%;padding:10px;border:none;border-radius:8px;background:#0E5C63;color:#fff;font-weight:600;">Cerrar</button>
+  </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script>
+// ---- CONFIGURE THESE TWO VALUES from your Supabase project settings ----
+const SUPABASE_URL = "YOUR_SUPABASE_URL";
+const SUPABASE_ANON_KEY = "YOUR_SUPABASE_ANON_KEY";
+// --------------------------------------------------------------------
+
+const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+const today = new Date().toISOString().slice(0,10);
+document.getElementById('todayLabel').textContent = new Date().toLocaleDateString('es-MX', { weekday:'long', year:'numeric', month:'long', day:'numeric' });
+
+let orders = [];
+let items = [];
+let workers = [];
+let orderItemsMap = {}; // order_id -> [ {item_id, qty, price_each} ]
+
+function switchTab(name){
+  document.querySelectorAll('.tab').forEach(t=>t.classList.toggle('active', t.dataset.panel===name));
+  document.querySelectorAll('.panel').forEach(p=>p.classList.toggle('active', p.id === 'panel-'+name));
+  if(name === 'resumen') renderSummary();
+}
+
+// ---------- LOAD DATA ----------
+async function loadAll(){
+  await Promise.all([loadItems(), loadWorkers(), loadOrders()]);
+}
+
+async function loadItems(){
+  const { data } = await sb.from('items').select('*').order('sort_order');
+  items = data || [];
+  renderInventory();
+}
+
+async function loadWorkers(){
+  const { data } = await sb.from('workers').select('*').eq('work_date', today).eq('active', true).order('created_at');
+  workers = data || [];
+  renderWorkers();
+}
+
+async function loadOrders(){
+  const { data: ordersData } = await sb.from('orders').select('*').eq('work_date', today).order('created_at', { ascending:false });
+  orders = ordersData || [];
+
+  const { data: oiData } = await sb.from('order_items').select('*').in('order_id', orders.map(o=>o.id).length ? orders.map(o=>o.id) : ['00000000-0000-0000-0000-000000000000']);
+  orderItemsMap = {};
+  (oiData || []).forEach(oi=>{
+    if(!orderItemsMap[oi.order_id]) orderItemsMap[oi.order_id] = [];
+    orderItemsMap[oi.order_id].push(oi);
+  });
+
+  renderOrders();
+}
+
+// ---------- ORDERS ----------
+function renderOrders(){
+  const pending = orders.filter(o=>o.status === 'pending');
+  const badge = document.getElementById('pendingBadge');
+  if(pending.length > 0){ badge.style.display='inline-block'; badge.textContent = pending.length; }
+  else { badge.style.display = 'none'; }
+
+  const list = document.getElementById('ordersList');
+  if(orders.length === 0){
+    list.innerHTML = `<div class="empty">Todavía no hay pedidos hoy.</div>`;
+    return;
+  }
+
+  list.innerHTML = '';
+  orders.forEach(order=>{
+    const lineItems = orderItemsMap[order.id] || [];
+    const itemsText = lineItems.map(li=>{
+      const item = items.find(i=>i.id === li.item_id);
+      return `${li.qty}× ${item ? item.name : '?'}`;
+    }).join(', ');
+
+    const time = new Date(order.created_at).toLocaleTimeString('es-MX', {hour:'2-digit',minute:'2-digit'});
+    const isDelivered = order.status === 'delivered';
+
+    const card = document.createElement('div');
+    card.className = 'card order-card';
+    card.innerHTML = `
+      <div class="order-left">
+        ${order.is_preorder ? `<span class="pill pill-pre">Pedido anticipado · ${order.hours_from_now}h</span>` : ''}
+        ${order.map_lat ? `<span class="pill pill-map" style="cursor:pointer;" onclick="showMap(${order.map_lat}, ${order.map_lng})">📍 Ver en mapa</span>` : ''}
+        <div class="order-items">${itemsText}</div>
+        <div class="order-meta">${time} ${isDelivered ? '· Entregado' : '· Pendiente'}</div>
+        ${!isDelivered ? `
+          <select class="worker-select" id="worker-${order.id}">
+            <option value="">Asignar a trabajador…</option>
+            ${workers.map(w=>`<option value="${w.id}">${w.name}</option>`).join('')}
+          </select>
+          <button class="btn btn-deliver" onclick="markDelivered('${order.id}')">Marcar como entregado</button>
+        ` : ''}
+      </div>
+      <div class="order-total">$${order.total_price}</div>
+    `;
+    list.appendChild(card);
+  });
+}
+
+async function markDelivered(orderId){
+  const select = document.getElementById(`worker-${orderId}`);
+  const workerId = select.value;
+  if(!workerId){ alert('Selecciona un trabajador primero'); return; }
+
+  const order = orders.find(o=>o.id === orderId);
+  const lineItems = orderItemsMap[orderId] || [];
+
+  // Decrease available inventory
+  for(const li of lineItems){
+    const item = items.find(i=>i.id === li.item_id);
+    if(item){
+      await sb.from('items').update({ available_qty: Math.max(0, item.available_qty - li.qty) }).eq('id', item.id);
+    }
+  }
+
+  await sb.from('orders').update({
+    status: 'delivered',
+    worker_id: workerId,
+    delivered_at: new Date().toISOString()
+  }).eq('id', orderId);
+
+  await loadItems();
+  await loadOrders();
+}
+
+// ---------- MAP MODAL ----------
+let modalLeafletMap = null;
+function showMap(lat, lng){
+  document.getElementById('mapModal').style.display = 'flex';
+  if(modalLeafletMap){ modalLeafletMap.remove(); modalLeafletMap = null; }
+  modalLeafletMap = L.map('modalMap', { zoomControl: true }).setView([lat, lng], 19);
+  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+    maxZoom: 19,
+    attribution: '&copy; OpenStreetMap contributors'
+  }).addTo(modalLeafletMap);
+  L.marker([lat, lng]).addTo(modalLeafletMap);
+}
+function closeMap(){
+  document.getElementById('mapModal').style.display = 'none';
+}
+
+// ---------- INVENTORY ----------
+function renderInventory(){
+  const list = document.getElementById('inventoryList');
+  if(items.length === 0){ list.innerHTML = `<div class="empty">No hay artículos todavía.</div>`; return; }
+  list.innerHTML = '';
+  items.forEach(item=>{
+    const row = document.createElement('div');
+    row.className = 'inv-row';
+    row.innerHTML = `
+      <div>
+        <div class="inv-name">${item.name}</div>
+        <div class="inv-sub" style="display:flex;align-items:center;gap:6px;">
+          $<input type="number" step="0.01" min="0" value="${item.price}"
+             style="width:70px;padding:2px 4px;border:1px solid #ccc;border-radius:4px;font-size:13px;"
+             onchange="updatePrice('${item.id}', this.value)">
+          · ${item.available_qty} de ${item.total_qty} disponibles
+        </div>
+        <button class="return-btn" onclick="returnItem('${item.id}')">↩ Regresar uno</button>
+      </div>
+      <div class="stepper">
+        <button onclick="adjustTotal('${item.id}', -1)">−</button>
+        <button onclick="adjustTotal('${item.id}', 1)">+</button>
+      </div>
+    `;
+    list.appendChild(row);
+  });
+}
+
+async function updatePrice(itemId, newPrice){
+  const price = Math.max(0, Number(newPrice) || 0);
+  await sb.from('items').update({ price }).eq('id', itemId);
+  await loadItems();
+}
+
+async function returnItem(itemId){
+  const item = items.find(i=>i.id === itemId);
+  const newAvail = Math.min(item.total_qty, item.available_qty + 1);
+  await sb.from('items').update({ available_qty: newAvail }).eq('id', itemId);
+  await loadItems();
+}
+
+async function adjustTotal(itemId, delta){
+  const item = items.find(i=>i.id === itemId);
+  const newTotal = Math.max(0, item.total_qty + delta);
+  const newAvail = Math.max(0, Math.min(newTotal, item.available_qty + delta));
+  await sb.from('items').update({ total_qty: newTotal, available_qty: newAvail }).eq('id', itemId);
+  await loadItems();
+}
+
+async function addItem(){
+  const name = document.getElementById('newItemName').value.trim();
+  const price = Number(document.getElementById('newItemPrice').value) || 0;
+  const qty = Number(document.getElementById('newItemQty').value) || 0;
+  if(!name) return;
+  await sb.from('items').insert({ name, price, total_qty: qty, available_qty: qty, sort_order: items.length + 1 });
+  document.getElementById('newItemName').value = '';
+  document.getElementById('newItemPrice').value = '';
+  document.getElementById('newItemQty').value = '';
+  await loadItems();
+}
+
+// ---------- WORKERS ----------
+function renderWorkers(){
+  const list = document.getElementById('workersList');
+  if(workers.length === 0){ list.innerHTML = `<div class="empty">Agrega al menos un trabajador para hoy.</div>`; return; }
+  list.innerHTML = '';
+  workers.forEach(w=>{
+    const row = document.createElement('div');
+    row.className = 'worker-row';
+    row.innerHTML = `
+      <div class="worker-name">${w.name}</div>
+      <button class="remove-btn" onclick="removeWorker('${w.id}')">✕</button>
+    `;
+    list.appendChild(row);
+  });
+}
+
+async function addWorker(){
+  const name = document.getElementById('newWorkerName').value.trim();
+  if(!name) return;
+  await sb.from('workers').insert({ name, work_date: today, active: true });
+  document.getElementById('newWorkerName').value = '';
+  await loadWorkers();
+  renderOrders(); // refresh dropdowns
+}
+
+async function removeWorker(id){
+  await sb.from('workers').update({ active: false }).eq('id', id);
+  await loadWorkers();
+  renderOrders();
+}
+
+// ---------- SUMMARY ----------
+async function renderSummary(){
+  const delivered = orders.filter(o=>o.status === 'delivered');
+  const totalCash = delivered.reduce((sum,o)=> sum + Number(o.total_price), 0);
+
+  document.getElementById('summaryStats').innerHTML = `
+    <div class="stat"><div class="num">${delivered.length}</div><div class="lbl">Pedidos entregados</div></div>
+    <div class="stat"><div class="num">$${totalCash}</div><div class="lbl">Efectivo esperado hoy</div></div>
+  `;
+
+  const { data: totals } = await sb.from('worker_totals').select('*').eq('work_date', today);
+  const box = document.getElementById('workerTotals');
+  if(!totals || totals.length === 0){
+    box.innerHTML = `<div class="empty">Aún no hay entregas asignadas.</div>`;
+    return;
+  }
+  box.innerHTML = '';
+  totals.forEach(t=>{
+    const row = document.createElement('div');
+    row.className = 'worker-row';
+    row.innerHTML = `
+      <div>
+        <div class="worker-name">${t.worker_name}</div>
+        <div class="worker-sub">${t.orders_delivered} pedidos entregados</div>
+      </div>
+      <div class="worker-cash">$${t.cash_total}</div>
+    `;
+    box.appendChild(row);
+  });
+}
+
+function exportCSV(){
+  const delivered = orders.filter(o=>o.status === 'delivered');
+  let rows = [['Hora','Artículos','Total','Trabajador']];
+  delivered.forEach(o=>{
+    const lineItems = orderItemsMap[o.id] || [];
+    const itemsText = lineItems.map(li=>{
+      const item = items.find(i=>i.id === li.item_id);
+      return `${li.qty}x ${item ? item.name : '?'}`;
+    }).join(' | ');
+    const worker = workers.find(w=>w.id === o.worker_id);
+    const time = new Date(o.created_at).toLocaleTimeString('es-MX');
+    rows.push([time, itemsText, o.total_price, worker ? worker.name : '']);
+  });
+  const csv = rows.map(r => r.map(v => `"${String(v).replace(/"/g,'""')}"`).join(',')).join('\n');
+  const blob = new Blob([csv], { type:'text/csv' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `resumen-${today}.csv`;
+  a.click();
+}
+
+// ---------- REALTIME ----------
+sb.channel('admin-live')
+  .on('postgres_changes', { event:'*', schema:'public', table:'orders' }, () => loadOrders())
+  .on('postgres_changes', { event:'*', schema:'public', table:'items' }, () => loadItems())
+  .on('postgres_changes', { event:'*', schema:'public', table:'workers' }, () => loadWorkers())
+  .subscribe();
+
+loadAll();
+</script>
+</body>
+</html>
