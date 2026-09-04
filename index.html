@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="es">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1">
@@ -232,19 +232,28 @@
   }
   .confirm p{color:#5C6B68;font-size:15px;line-height:1.5;}
   .hidden{display:none !important;}
+
+/* Added tropical customer experience */
+body::before{content:"";position:fixed;inset:0;pointer-events:none;z-index:-1;background:linear-gradient(180deg,rgba(255,255,255,.18),transparent 35%),url("https://images.unsplash.com/photo-1507525428034-b723cf961d3e?auto=format&fit=crop&w=1800&q=80") center/cover;opacity:.22}
+.ocean{position:fixed;left:0;right:0;bottom:0;height:120px;overflow:hidden;pointer-events:none;z-index:-1}.ocean:before,.ocean:after{content:"";position:absolute;width:200%;height:70px;border-radius:45%;background:rgba(25,170,190,.28);animation:wave 8s linear infinite}.ocean:after{bottom:15px;background:rgba(255,255,255,.22);animation-duration:11s}@keyframes wave{from{transform:translateX(-10%)}to{transform:translateX(-55%)}}
+.tropical-decor{position:fixed;top:82px;right:4vw;font-size:72px;opacity:.18;pointer-events:none;transform:rotate(-12deg)}
+.weather-card{margin:0 0 12px;background:rgba(255,255,255,.86);border-radius:16px;padding:10px 14px;display:flex;justify-content:space-between;align-items:center;font-size:13px}
+.service-btn{width:100%;margin-top:12px;background:var(--teal);color:#fff;border:0;border-radius:14px;padding:14px;font-weight:700;font-size:15px}.customer-status{margin-top:18px}.status-timer{font-family:'Fraunces',serif;font-size:28px;color:var(--teal-deep);font-weight:700}
 </style>
 </head>
-<body>
+<body><div class="tropical-decor">🌴</div><div class="ocean"></div>
 
 <header>
   <div class="brand" id="brandText">Beach Order<small id="brandSub">Skip the walk-up — order from your spot</small></div>
   <div class="lang-toggle">
-    <button id="btnEN" class="active" onclick="setLang('en')">EN</button>
-    <button id="btnES" onclick="setLang('es')">ES</button>
+    <button id="btnEN" onclick="setLang('en')">EN</button>
+    <button id="btnES" class="active" onclick="setLang('es')">ES</button>
   </div>
 </header>
 
 <main>
+  <div class="weather-card">🌤️ <span id="weatherText">Clima de playa</span><strong id="weatherTemp">--°</strong></div>
+  <div id="returningStatus" class="card customer-status hidden"></div>
   <div id="orderView">
     <div class="section-title" data-t="whatDoYouWant">What would you like?</div>
     <div class="card" id="itemsList"><!-- items injected here --></div>
@@ -271,6 +280,7 @@
         </div>
       </div>
     </div>
+    <button class="service-btn" onclick="requestService()">🛎️ Necesito ayuda</button>
   </div>
 
   <div class="confirm" id="confirmView">
@@ -295,12 +305,12 @@
 <script>
 // ---- CONFIGURE THESE TWO VALUES from your Supabase project settings ----
 const SUPABASE_URL = "https://puvdxldgotrnmlmxixqe.supabase.co";
-const SUPABASE_ANON_KEY = "sb_publishable_cWZ1N860dKUKvnivGEHlCQ_9ayMmHgy";
+const SUPABASE_ANON_KEY = "YOUR_SUPABASE_ANON_KEY";
 // --------------------------------------------------------------------
 
 const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
-let lang = 'en';
+let lang = 'es';
 let items = [];
 let qtys = {};
 let mapLat = null, mapLng = null;
@@ -350,6 +360,34 @@ function setLang(l){
   });
   updateSubmitState();
   updateHours();
+}
+
+
+const customerToken = localStorage.getItem('beach_customer_token') || (crypto.randomUUID ? crypto.randomUUID() : String(Date.now())+Math.random());
+localStorage.setItem('beach_customer_token', customerToken);
+
+async function loadCustomerState(){
+  const id=localStorage.getItem('beach_last_order'); if(!id) return;
+  const {data:o}=await sb.from('orders').select('*').eq('id',id).single();
+  if(!o || ['cancelled','deleted'].includes(o.status)){localStorage.removeItem('beach_last_order');return;}
+  const box=document.getElementById('returningStatus'); box.classList.remove('hidden');
+  const end=o.rental_end_at ? new Date(o.rental_end_at).getTime() : null;
+  const tick=()=>{ if(!end){box.innerHTML='<strong>Tu pedido</strong><br>'+o.status;return;}
+    const ms=Math.max(0,end-Date.now()),h=Math.floor(ms/3600000),m=Math.floor(ms%3600000/60000),sec=Math.floor(ms%60000/1000);
+    box.innerHTML='<div>Tiempo restante de tu renta</div><div class="status-timer">'+String(h).padStart(2,'0')+':'+String(m).padStart(2,'0')+':'+String(sec).padStart(2,'0')+'</div>'; };
+  tick(); setInterval(tick,1000);
+}
+async function requestService(){
+  const orderId=localStorage.getItem('beach_last_order');
+  const {error}=await sb.from('service_requests').insert({order_id:orderId||null,customer_token:customerToken,status:'pending',message:'Customer requested assistance'});
+  alert(error?'No se pudo enviar la solicitud.':'¡Solicitud de servicio enviada!');
+}
+async function loadWeather(){
+  if(!navigator.geolocation)return;
+  navigator.geolocation.getCurrentPosition(async p=>{try{
+    const r=await fetch(`https://api.open-meteo.com/v1/forecast?latitude=${p.coords.latitude}&longitude=${p.coords.longitude}&current=temperature_2m&timezone=auto`);
+    const d=await r.json();document.getElementById('weatherTemp').textContent=Math.round(d.current.temperature_2m)+'°C';
+  }catch(e){}},()=>{});
 }
 
 async function loadItems(){
@@ -469,13 +507,14 @@ async function submitOrder(){
   const total = orderedItems.reduce((sum,i)=> sum + qtys[i.id]*i.price, 0);
   const hours = isPreorder ? Number(document.getElementById('hoursSlider').value) : null;
 
+  const rentalEndAt = hours ? new Date(Date.now()+hours*3600000).toISOString() : null;
   const { data: order, error } = await sb.from('orders').insert({
     map_lat: mapLat,
     map_lng: mapLng,
     is_preorder: isPreorder,
     hours_from_now: hours,
     total_price: total,
-    status: 'pending'
+    status: 'pending', customer_token: customerToken, rental_end_at: rentalEndAt
   }).select().single();
 
   if(error){ console.error(error); btn.disabled=false; updateSubmitState(); return; }
@@ -488,6 +527,7 @@ async function submitOrder(){
   }));
   await sb.from('order_items').insert(lineItems);
 
+  localStorage.setItem('beach_last_order', order.id);
   document.getElementById('orderView').style.display = 'none';
   document.getElementById('submitBar').style.display = 'none';
   document.getElementById('confirmView').style.display = 'block';
@@ -495,7 +535,9 @@ async function submitOrder(){
 
 loadItems();
 startMap();
-setLang('en');
+setLang('es');
+loadCustomerState();
+loadWeather();
 </script>
 </body>
 </html>
