@@ -1,0 +1,853 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1">
+<title>Beach Order</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:wght@500;600;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --sand:#EDE3CE;
+    --sand-deep:#E2D4B4;
+    --teal:#0E5C63;
+    --teal-deep:#0A4348;
+    --coral:#E9633B;
+    --ink:#1F2A28;
+    --sun:#F4B740;
+    --white:#FFFFFF;
+  }
+  *{box-sizing:border-box;}
+  html,body{margin:0;padding:0;}
+  body{
+    background:var(--sand);
+    background-image:
+      radial-gradient(circle at 15% 8%, rgba(244,183,64,0.35), transparent 40%),
+      radial-gradient(circle at 90% 0%, rgba(14,92,99,0.12), transparent 45%);
+    font-family:'Inter',sans-serif;
+    color:var(--ink);
+    min-height:100vh;
+    padding-bottom:100px;
+  }
+  header{
+    padding:28px 20px 20px;
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+  }
+  .brand{
+    font-family:'Fraunces',serif;
+    font-weight:700;
+    font-size:26px;
+    color:var(--teal-deep);
+    line-height:1.1;
+  }
+  .brand small{
+    display:block;
+    font-family:'Inter',sans-serif;
+    font-weight:500;
+    font-size:12px;
+    letter-spacing:0.02em;
+    color:var(--teal);
+    margin-top:2px;
+  }
+  .lang-toggle{
+    display:flex;
+    background:var(--white);
+    border-radius:999px;
+    padding:4px;
+    box-shadow:0 2px 8px rgba(31,42,40,0.08);
+  }
+  .lang-toggle button{
+    border:none;
+    background:transparent;
+    padding:8px 14px;
+    border-radius:999px;
+    font-family:'Inter',sans-serif;
+    font-weight:600;
+    font-size:13px;
+    color:var(--teal);
+    cursor:pointer;
+  }
+  .lang-toggle button.active{
+    background:var(--teal);
+    color:var(--white);
+  }
+  main{
+    max-width:520px;
+    margin:0 auto;
+    padding:0 20px;
+  }
+  .section-title{
+    font-family:'Fraunces',serif;
+    font-weight:600;
+    font-size:19px;
+    color:var(--teal-deep);
+    margin:28px 0 12px;
+  }
+  .card{
+    background:var(--white);
+    border-radius:18px;
+    padding:18px;
+    box-shadow:0 4px 16px rgba(31,42,40,0.06);
+  }
+  .item-row{
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    padding:14px 0;
+    border-bottom:1px solid #F0E9D8;
+  }
+  .item-row:last-child{border-bottom:none;}
+  .item-name{font-weight:600;font-size:15px;}
+  .item-price{font-size:13px;color:#6B7B78;margin-top:2px;}
+  .qty-control{
+    display:flex;
+    align-items:center;
+    gap:12px;
+  }
+  .qty-btn{
+    width:36px;height:36px;
+    border-radius:10px;
+    border:none;
+    background:var(--sand-deep);
+    color:var(--teal-deep);
+    font-size:18px;
+    font-weight:700;
+    cursor:pointer;
+    display:flex;align-items:center;justify-content:center;
+  }
+  .qty-btn:active{background:var(--teal);color:var(--white);}
+  .qty-num{
+    min-width:20px;
+    text-align:center;
+    font-weight:700;
+    font-size:16px;
+  }
+  .map-wrap{
+    position:relative;
+    border-radius:18px;
+    overflow:hidden;
+    aspect-ratio:4/3;
+    background:#DCEFEE;
+  }
+  .map-hint{
+    position:absolute;
+    bottom:10px;left:10px;right:10px;
+    background:rgba(31,42,40,0.65);
+    color:var(--white);
+    font-size:12px;
+    padding:8px 12px;
+    border-radius:10px;
+    text-align:center;
+  }
+  .toggle-row{
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    padding:6px 2px 14px;
+  }
+  .toggle-row .label{font-weight:600;font-size:15px;}
+  .switch{
+    position:relative;width:48px;height:28px;
+  }
+  .switch input{opacity:0;width:0;height:0;}
+  .slider{
+    position:absolute;inset:0;
+    background:#D9CFB6;
+    border-radius:999px;
+    cursor:pointer;
+    transition:0.2s;
+  }
+  .slider:before{
+    content:"";
+    position:absolute;
+    height:22px;width:22px;
+    left:3px;top:3px;
+    background:var(--white);
+    border-radius:50%;
+    transition:0.2s;
+  }
+  input:checked + .slider{background:var(--teal);}
+  input:checked + .slider:before{transform:translateX(20px);}
+  #preorderFields{
+    display:none;
+    padding-top:6px;
+  }
+  .hours-row{
+    display:flex;align-items:center;gap:12px;
+  }
+  input[type="range"]{
+    flex:1;
+    accent-color:var(--teal);
+  }
+  #hoursLabel{font-weight:700;min-width:70px;text-align:right;font-size:14px;}
+  .submit-bar{
+    position:fixed;
+    bottom:0;left:0;right:0;
+    background:var(--white);
+    box-shadow:0 -4px 20px rgba(31,42,40,0.1);
+    padding:14px 20px calc(14px + env(safe-area-inset-bottom));
+  }
+  .submit-bar-inner{
+    max-width:520px;margin:0 auto;
+    display:flex;align-items:center;gap:14px;
+  }
+  .total{
+    flex-shrink:0;
+    font-family:'Fraunces',serif;
+    font-weight:700;
+    font-size:20px;
+    color:var(--teal-deep);
+  }
+  #submitBtn{
+    flex:1;
+    background:var(--coral);
+    color:var(--white);
+    border:none;
+    border-radius:14px;
+    padding:16px;
+    font-family:'Inter',sans-serif;
+    font-weight:700;
+    font-size:16px;
+    cursor:pointer;
+  }
+  #submitBtn:disabled{background:#D9B3A4;cursor:not-allowed;}
+  .confirm{
+    display:none;
+    text-align:center;
+    padding:60px 20px;
+  }
+  .confirm .check{
+    width:64px;height:64px;
+    border-radius:50%;
+    background:var(--teal);
+    display:flex;align-items:center;justify-content:center;
+    margin:0 auto 18px;
+  }
+  .confirm h2{
+    font-family:'Fraunces',serif;
+    color:var(--teal-deep);
+    font-size:24px;
+  }
+  .confirm p{color:#5C6B68;font-size:15px;line-height:1.5;}
+  .hidden{display:none !important;}
+
+  /* TUTORIAL */
+  .tut-overlay{
+    position:fixed;inset:0;background:rgba(10,67,72,0.55);
+    display:flex;align-items:flex-end;justify-content:center;
+    z-index:2000;
+  }
+  .tut-card{
+    background:var(--white);
+    border-radius:24px 24px 0 0;
+    padding:26px 22px calc(26px + env(safe-area-inset-bottom));
+    width:100%;max-width:520px;
+    box-shadow:0 -8px 30px rgba(0,0,0,0.2);
+  }
+  .tut-step-icon{font-size:34px;margin-bottom:8px;}
+  .tut-title{font-family:'Fraunces',serif;font-weight:700;font-size:20px;color:var(--teal-deep);margin:0 0 6px;}
+  .tut-body{font-size:14px;color:var(--ink);line-height:1.5;margin:0 0 20px;}
+  .tut-dots{display:flex;gap:6px;justify-content:center;margin-bottom:16px;}
+  .tut-dot{width:7px;height:7px;border-radius:50%;background:var(--sand-deep);}
+  .tut-dot.active{background:var(--teal);width:20px;border-radius:4px;}
+  .tut-btn-row{display:flex;gap:10px;}
+  .tut-skip{background:none;border:none;color:var(--teal);font-weight:700;font-size:14px;cursor:pointer;padding:12px;}
+  .tut-next{flex:1;background:var(--coral);color:white;border:none;border-radius:14px;padding:14px;font-weight:800;font-size:15px;cursor:pointer;}
+  .help-fab{
+    position:fixed;bottom:110px;right:16px;
+    width:44px;height:44px;border-radius:50%;
+    background:var(--teal-deep);color:white;
+    display:flex;align-items:center;justify-content:center;
+    font-weight:800;font-size:17px;
+    box-shadow:0 4px 14px rgba(10,67,72,0.35);
+    cursor:pointer;z-index:500;border:none;
+  }
+  .map-hint-pulse{
+    animation:hintPulse 1.6s ease-in-out infinite;
+  }
+  @keyframes hintPulse{
+    0%,100%{transform:scale(1);}
+    50%{transform:scale(1.035);}
+  }
+
+/* Added tropical customer experience */
+body::before{content:"";position:fixed;inset:0;pointer-events:none;z-index:-1;background:linear-gradient(180deg,rgba(255,255,255,.18),transparent 35%),url("https://images.unsplash.com/photo-1507525428034-b723cf961d3e?auto=format&fit=crop&w=1800&q=80") center/cover;opacity:.22}
+.ocean{position:fixed;left:0;right:0;bottom:0;height:120px;overflow:hidden;pointer-events:none;z-index:-1}.ocean:before,.ocean:after{content:"";position:absolute;width:200%;height:70px;border-radius:45%;background:rgba(25,170,190,.28);animation:wave 8s linear infinite}.ocean:after{bottom:15px;background:rgba(255,255,255,.22);animation-duration:11s}@keyframes wave{from{transform:translateX(-10%)}to{transform:translateX(-55%)}}
+.tropical-decor{position:fixed;top:82px;right:4vw;font-size:72px;opacity:.18;pointer-events:none;transform:rotate(-12deg)}
+.weather-card{margin:0 0 12px;background:rgba(255,255,255,.86);border-radius:16px;padding:10px 14px;display:flex;justify-content:space-between;align-items:center;font-size:13px}
+.service-btn{width:100%;margin-top:12px;background:var(--teal);color:#fff;border:0;border-radius:14px;padding:14px;font-weight:700;font-size:15px}.customer-status{margin-top:18px}.status-timer{font-family:'Fraunces',serif;font-size:28px;color:var(--teal-deep);font-weight:700}
+
+.my-location-btn{position:absolute;top:10px;right:10px;width:40px;height:40px;border-radius:10px;background:var(--white);border:none;box-shadow:0 2px 8px rgba(31,42,40,0.2);font-size:18px;display:flex;align-items:center;justify-content:center;cursor:pointer;z-index:400;}
+.dash-order-items{font-size:14px;line-height:1.7;margin-bottom:4px;}
+.dash-timer-wrap{text-align:center;padding:18px 0 6px;}
+.msg-thread-c{max-height:220px;overflow-y:auto;display:flex;flex-direction:column;gap:8px;margin:10px 0;padding:4px 2px;}
+.msg-bubble-c{max-width:80%;padding:9px 13px;border-radius:14px;font-size:13px;line-height:1.4;}
+.msg-admin-c{align-self:flex-start;background:var(--sand-deep);color:var(--ink);}
+.msg-client-c{align-self:flex-end;background:var(--teal);color:white;}
+.msg-input-row-c{display:flex;gap:8px;}
+.msg-input-row-c input{flex:1;padding:11px;border-radius:10px;border:1px solid #DDD3BB;font-size:14px;}
+.msg-input-row-c button{background:var(--teal);color:white;border:none;border-radius:10px;padding:0 16px;font-weight:700;cursor:pointer;}
+.new-order-btn{width:100%;background:none;border:2px solid var(--teal);color:var(--teal-deep);border-radius:14px;padding:12px;font-weight:700;font-size:14px;cursor:pointer;margin-top:16px;}
+</style>
+</head>
+<body><div class="tropical-decor">🌴</div><div class="ocean"></div>
+
+<div class="tut-overlay" id="tutOverlay">
+  <div class="tut-card">
+    <div class="tut-step-icon" id="tutIcon">🍹</div>
+    <h2 class="tut-title" id="tutTitle">¿Qué te gustaría?</h2>
+    <p class="tut-body" id="tutBody">Elige tus sillas, sombrillas o mesas con los botones + y −.</p>
+    <div class="tut-dots" id="tutDots"></div>
+    <div class="tut-btn-row">
+      <button class="tut-skip" id="tutSkipBtn" onclick="skipTutorial()">Saltar</button>
+      <button class="tut-next" id="tutNextBtn" onclick="nextTutorialStep()">Siguiente</button>
+    </div>
+  </div>
+</div>
+
+<button class="help-fab" id="helpFab" onclick="startTutorial()">?</button>
+
+
+<header>
+  <div class="brand" id="brandText">Beach Order<small id="brandSub">Skip the walk-up — order from your spot</small></div>
+  <div class="lang-toggle">
+    <button id="btnEN" onclick="setLang('en')">EN</button>
+    <button id="btnES" class="active" onclick="setLang('es')">ES</button>
+  </div>
+</header>
+
+<main>
+  <div class="weather-card">🌤️ <span id="weatherText">Clima de playa</span><strong id="weatherTemp">--°</strong></div>
+  <div id="orderView">
+    <div class="section-title" data-t="whatDoYouWant">What would you like?</div>
+    <div class="card" id="itemsList"><!-- items injected here --></div>
+
+    <div class="section-title" data-t="whereAreYou">Where are you?</div>
+    <div class="map-wrap" id="mapWrap">
+      <div id="leafletMap" style="width:100%;height:100%;"></div>
+      <button class="my-location-btn" id="myLocationBtn" onclick="useMyLocation()" title="Usar mi ubicación">📍</button>
+      <div class="map-hint map-hint-pulse" id="mapHint" data-t="tapMap">👆 Tap anywhere on the map to mark exactly where you're sitting</div>
+    </div>
+
+    <div class="section-title" data-t="whenTitle">When?</div>
+    <div class="card">
+      <div class="toggle-row">
+        <div class="label" data-t="preorderLabel">Order for later today</div>
+        <label class="switch">
+          <input type="checkbox" id="preorderToggle" onchange="togglePreorder()">
+          <span class="slider"></span>
+        </label>
+      </div>
+      <div id="preorderFields">
+        <div class="hours-row" style="display:flex;">
+          <span style="font-size:13px;font-weight:700;margin-right:10px;" data-t="rentalHours">Horas de renta</span>
+          <input type="range" id="hoursSlider" min="1" max="12" step="1" value="2" oninput="updateHours()">
+          <span id="hoursLabel">2 hrs</span>
+        </div>
+      </div>
+    </div>
+    <button class="service-btn" onclick="requestService()">🛎️ Necesito ayuda</button>
+  </div>
+
+  <div class="confirm hidden" id="confirmFlash">
+    <div class="check">
+      <svg width="30" height="30" viewBox="0 0 24 24" fill="none"><path d="M5 13l4 4L19 7" stroke="white" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/></svg>
+    </div>
+    <h2 data-t="confirmTitle">Order sent!</h2>
+    <p data-t="confirmBody">Someone will bring your order to your spot shortly.</p>
+  </div>
+
+  <div id="dashboardView" class="hidden">
+    <div class="section-title" id="dashTitle" data-t="dashTitle">Tu pedido</div>
+    <div class="card">
+      <div class="dash-order-items" id="dashItems"></div>
+      <div class="dash-timer-wrap">
+        <div style="font-size:12px;color:#6B7B78;" id="dashTimerLabel">Tiempo restante</div>
+        <div class="status-timer" id="dashTimer">--:--:--</div>
+      </div>
+    </div>
+
+    <div class="section-title" id="dashMsgTitle" data-t="dashMsgTitle">Mensajes</div>
+    <div class="card">
+      <div class="msg-thread-c" id="dashMsgThread"></div>
+      <div class="msg-input-row-c">
+        <input type="text" id="dashMsgInput" placeholder="Escribe un mensaje...">
+        <button onclick="sendCustomerMessage()">➤</button>
+      </div>
+    </div>
+
+    <button class="service-btn" onclick="requestService()" id="dashServiceBtn" data-t="dashServiceBtn">🛎️ Necesito ayuda</button>
+    <button class="new-order-btn" onclick="startNewOrder()" id="dashNewOrderBtn" data-t="dashNewOrderBtn">＋ Hacer otro pedido</button>
+  </div>
+</main>
+
+<div class="submit-bar" id="submitBar">
+  <div class="submit-bar-inner">
+    <div class="total" id="totalDisplay">$0</div>
+    <button id="submitBtn" onclick="submitOrder()" disabled data-t="submitBtn">Pick a spot on the map</button>
+  </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script>
+// ---- CONFIGURE THESE TWO VALUES from your Supabase project settings ----
+const SUPABASE_URL = "https://puvdxldgotrnmlmxixqe.supabase.co";
+const SUPABASE_ANON_KEY = "sb_publishable_cWZ1N860dKUKvnivGEHlCQ_9ayMmHgy";
+// --------------------------------------------------------------------
+
+const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+let lang = 'es';
+let items = [];
+let qtys = {};
+let mapLat = null, mapLng = null;
+let isPreorder = false;
+let lmap, lmarker;
+
+const dict = {
+  en: {
+    brand: "Beach Order",
+    brandSub: "Skip the walk-up — order from your spot",
+    whatDoYouWant: "What would you like?",
+    whereAreYou: "Where are you?",
+    tapMap: "Tap where you're sitting",
+    whenTitle: "When?",
+    preorderLabel: "Order for later today",
+    submitBtn: "Pick a spot on the map",
+    submitReady: "Send order",
+    confirmTitle: "Order sent!",
+    confirmBody: "Someone will bring your order to your spot shortly.",
+    hrs: "hrs",
+    dashTitle: "Your order",
+    dashMsgTitle: "Messages",
+    dashServiceBtn: "🛎️ I need help",
+    dashNewOrderBtn: "＋ Place another order"
+  },
+  es: {
+    brand: "Pedido de Playa",
+    brandSub: "Sin caminar a buscar — pide desde tu lugar",
+    whatDoYouWant: "¿Qué te gustaría?",
+    whereAreYou: "¿Dónde estás?",
+    tapMap: "Toca donde estás sentado",
+    whenTitle: "¿Cuándo?",
+    preorderLabel: "Pedir para más tarde hoy",
+    submitBtn: "Elige un lugar en el mapa",
+    submitReady: "Enviar pedido",
+    confirmTitle: "¡Pedido enviado!",
+    confirmBody: "Alguien llevará tu pedido a tu lugar en breve.",
+    hrs: "hrs",
+    dashTitle: "Tu pedido",
+    dashMsgTitle: "Mensajes",
+    dashServiceBtn: "🛎️ Necesito ayuda",
+    dashNewOrderBtn: "＋ Hacer otro pedido"
+  }
+};
+
+function setLang(l){
+  lang = l;
+  document.getElementById('btnEN').classList.toggle('active', l==='en');
+  document.getElementById('btnES').classList.toggle('active', l==='es');
+  document.getElementById('brandText').childNodes[0].nodeValue = dict[l].brand;
+  document.getElementById('brandSub').textContent = dict[l].brandSub;
+  document.querySelectorAll('[data-t]').forEach(el=>{
+    const key = el.getAttribute('data-t');
+    if(dict[l][key]) el.textContent = dict[l][key];
+  });
+  updateSubmitState();
+  updateHours();
+}
+
+
+const customerToken = localStorage.getItem('beach_customer_token') || (crypto.randomUUID ? crypto.randomUUID() : String(Date.now())+Math.random());
+localStorage.setItem('beach_customer_token', customerToken);
+
+let dashOrderId = null;
+let dashTickInterval = null;
+let dashMsgSub = null;
+
+async function loadCustomerState(){
+  const id=localStorage.getItem('beach_last_order'); if(!id) return;
+  const {data:o}=await sb.from('orders').select('*').eq('id',id).single();
+  if(!o || ['cancelled','returned'].includes(o.status)){ localStorage.removeItem('beach_last_order'); return; }
+  await openDashboard(id, o);
+}
+
+async function openDashboard(orderId, orderRow){
+  dashOrderId = orderId;
+  let order = orderRow;
+  if(!order){ const {data:o}=await sb.from('orders').select('*').eq('id',orderId).single(); order = o; }
+  if(!order) return;
+
+  document.getElementById('orderView').style.display = 'none';
+  document.getElementById('submitBar').style.display = 'none';
+  document.getElementById('dashboardView').classList.remove('hidden');
+
+  const {data: lineItemsRaw} = await sb.from('order_items').select('*').eq('order_id', orderId);
+  const dashItemsEl = document.getElementById('dashItems');
+  dashItemsEl.innerHTML = (lineItemsRaw||[]).map(li=>{
+    const item = items.find(i=>i.id===li.item_id);
+    return `<div>${li.qty}x ${item ? item.name : '?'}</div>`;
+  }).join('') + `<div style="margin-top:6px;font-weight:700;color:var(--teal-deep);">$${order.total_price}</div>`;
+
+  const end = order.status === 'delivered' && order.delivered_at
+    ? new Date(order.delivered_at).getTime() + Number(order.duration_hours||2)*3600000
+    : null;
+
+  if(dashTickInterval) clearInterval(dashTickInterval);
+  const tick = ()=>{
+    const timerEl = document.getElementById('dashTimer');
+    const labelEl = document.getElementById('dashTimerLabel');
+    if(order.status !== 'delivered'){
+      labelEl.textContent = lang==='es' ? 'Tu pedido está pendiente' : 'Your order is pending';
+      timerEl.textContent = '--:--:--';
+      return;
+    }
+    labelEl.textContent = lang==='es' ? 'Tiempo restante de tu renta' : 'Time left on your rental';
+    const ms = Math.max(0, end - Date.now());
+    const h = Math.floor(ms/3600000), m = Math.floor(ms%3600000/60000), sec = Math.floor(ms%60000/1000);
+    timerEl.textContent = `${String(h).padStart(2,'0')}:${String(m).padStart(2,'0')}:${String(sec).padStart(2,'0')}`;
+  };
+  tick();
+  dashTickInterval = setInterval(async ()=>{
+    tick();
+  }, 1000);
+
+  loadCustomerMessages(orderId);
+  subscribeCustomerMessages(orderId);
+  subscribeOrderUpdates(orderId);
+}
+
+let dashOrderSub = null;
+function subscribeOrderUpdates(orderId){
+  if(dashOrderSub) sb.removeChannel(dashOrderSub);
+  dashOrderSub = sb.channel('customer-order-'+orderId)
+    .on('postgres_changes', { event:'UPDATE', schema:'public', table:'orders', filter:`id=eq.${orderId}` }, (payload)=>{
+      if(['cancelled','returned'].includes(payload.new.status)){
+        startNewOrder();
+      } else {
+        openDashboard(orderId, payload.new);
+      }
+    }).subscribe();
+}
+
+function startNewOrder(){
+  localStorage.removeItem('beach_last_order');
+  if(dashTickInterval) clearInterval(dashTickInterval);
+  if(dashMsgSub) sb.removeChannel(dashMsgSub);
+  if(dashOrderSub) sb.removeChannel(dashOrderSub);
+  document.getElementById('dashboardView').classList.add('hidden');
+  document.getElementById('orderView').style.display = 'block';
+  document.getElementById('submitBar').style.display = 'block';
+}
+
+async function loadCustomerMessages(orderId){
+  const {data} = await sb.from('messages').select('*').eq('order_id', orderId).order('created_at');
+  const thread = document.getElementById('dashMsgThread');
+  if(!thread) return;
+  thread.innerHTML = '';
+  (data||[]).forEach(m=>{
+    const b = document.createElement('div');
+    b.className = 'msg-bubble-c ' + (m.sender==='admin' ? 'msg-admin-c' : 'msg-client-c');
+    b.textContent = m.body;
+    thread.appendChild(b);
+  });
+  thread.scrollTop = thread.scrollHeight;
+}
+
+function subscribeCustomerMessages(orderId){
+  if(dashMsgSub) sb.removeChannel(dashMsgSub);
+  dashMsgSub = sb.channel('customer-msg-'+orderId)
+    .on('postgres_changes', { event:'INSERT', schema:'public', table:'messages', filter:`order_id=eq.${orderId}` }, ()=>{
+      loadCustomerMessages(orderId);
+    }).subscribe();
+}
+
+async function sendCustomerMessage(){
+  const input = document.getElementById('dashMsgInput');
+  const body = input.value.trim();
+  if(!body || !dashOrderId) return;
+  input.value = '';
+  await sb.from('messages').insert({ order_id: dashOrderId, sender:'client', body });
+  await loadCustomerMessages(dashOrderId);
+}
+
+function useMyLocation(){
+  if(!navigator.geolocation) return;
+  const btn = document.getElementById('myLocationBtn');
+  btn.textContent = '…';
+  navigator.geolocation.getCurrentPosition(pos=>{
+    const {latitude, longitude} = pos.coords;
+    if(lmap) lmap.setView([latitude, longitude], 19);
+    dropPin(latitude, longitude);
+    btn.textContent = '📍';
+  }, ()=>{ btn.textContent = '📍'; }, { enableHighAccuracy:true, timeout:6000 });
+}
+async function requestService(){
+  const orderId=localStorage.getItem('beach_last_order');
+  const {error}=await sb.from('service_calls').insert({order_id:orderId||null});
+  alert(error?'No se pudo enviar la solicitud.':'¡Solicitud de servicio enviada!');
+}
+async function loadWeather(){
+  if(!navigator.geolocation)return;
+  navigator.geolocation.getCurrentPosition(async p=>{try{
+    const r=await fetch(`https://api.open-meteo.com/v1/forecast?latitude=${p.coords.latitude}&longitude=${p.coords.longitude}&current=temperature_2m&timezone=auto`);
+    const d=await r.json();document.getElementById('weatherTemp').textContent=Math.round(d.current.temperature_2m)+'°C';
+  }catch(e){}},()=>{});
+}
+
+async function loadItems(){
+  const { data, error } = await sb.from('items').select('*').order('sort_order');
+  if(error){ console.error(error); return; }
+  items = data;
+  const oldQtys = qtys;
+  qtys = {};
+  items.forEach(i => {
+    let q = oldQtys[i.id] || 0;
+    if(q > i.available_qty) q = i.available_qty;
+    qtys[i.id] = q;
+  });
+  renderItems();
+  updateTotal();
+}
+
+function itemEmoji(name){
+  const n = name.toLowerCase();
+  if(n.includes('sombr') || n.includes('umbrella')) return '⛱️';
+  if(n.includes('mesa') || n.includes('table')) return '🍽️';
+  if(n.includes('silla') || n.includes('chair')) return '🪑';
+  return '🌊';
+}
+
+function renderItems(){
+  const list = document.getElementById('itemsList');
+  list.innerHTML = '';
+  items.forEach(item=>{
+    const row = document.createElement('div');
+    row.className = 'item-row';
+    row.innerHTML = `
+      <div>
+        <div class="item-name">${itemEmoji(item.name)} ${item.name}</div>
+        <div class="item-price">$${item.price} · ${item.available_qty} ${lang==='es' ? 'disponibles' : 'available'}</div>
+      </div>
+      <div class="qty-control">
+        <button class="qty-btn" onclick="changeQty('${item.id}', -1)">−</button>
+        <div class="qty-num" id="qty-${item.id}">${qtys[item.id] || 0}</div>
+        <button class="qty-btn" onclick="changeQty('${item.id}', 1)">+</button>
+      </div>
+    `;
+    list.appendChild(row);
+  });
+}
+
+function changeQty(id, delta){
+  const item = items.find(i=>i.id===id);
+  let newQty = qtys[id] + delta;
+  if(newQty < 0) newQty = 0;
+  if(newQty > item.available_qty) newQty = item.available_qty;
+  qtys[id] = newQty;
+  document.getElementById(`qty-${id}`).textContent = newQty;
+  updateTotal();
+}
+
+function updateTotal(){
+  let total = 0;
+  items.forEach(i => total += qtys[i.id] * i.price);
+  document.getElementById('totalDisplay').textContent = `$${total}`;
+  updateSubmitState();
+}
+
+function dropPin(lat, lng){
+  mapLat = lat;
+  mapLng = lng;
+  const hint = document.getElementById('mapHint');
+  if(hint){
+    hint.classList.remove('map-hint-pulse');
+    hint.textContent = lang==='es' ? '✓ Lugar marcado — puedes arrastrar el pin para ajustarlo' : '✓ Spot marked — drag the pin to adjust it';
+  }
+  if(!lmarker){
+    lmarker = L.marker([lat, lng], { draggable:true }).addTo(lmap);
+    lmarker.on('dragend', ()=>{
+      const pos = lmarker.getLatLng();
+      mapLat = pos.lat;
+      mapLng = pos.lng;
+      updateSubmitState();
+    });
+  } else {
+    lmarker.setLatLng([lat, lng]);
+  }
+  updateSubmitState();
+}
+
+function initMap(defaultCenter){
+  lmap = L.map('leafletMap', { zoomControl: true }).setView([defaultCenter.lat, defaultCenter.lng], 19);
+  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+    maxZoom: 19,
+    attribution: '&copy; OpenStreetMap contributors'
+  }).addTo(lmap);
+  lmap.on('click', (e)=> dropPin(e.latlng.lat, e.latlng.lng));
+}
+
+function startMap(){
+  const fallback = { lat: 21.4934, lng: -87.9954 }; // fallback: adjust to your beach's coordinates
+  if(navigator.geolocation){
+    navigator.geolocation.getCurrentPosition(
+      (pos)=> initMap({ lat: pos.coords.latitude, lng: pos.coords.longitude }),
+      ()=> initMap(fallback),
+      { enableHighAccuracy:true, timeout:6000 }
+    );
+  } else {
+    initMap(fallback);
+  }
+}
+
+function togglePreorder(){
+  isPreorder = document.getElementById('preorderToggle').checked;
+  document.getElementById('preorderFields').style.display = isPreorder ? 'block' : 'none';
+}
+
+function updateHours(){
+  const v = document.getElementById('hoursSlider').value;
+  document.getElementById('hoursLabel').textContent = `${v} ${dict[lang].hrs}`;
+}
+
+function updateSubmitState(){
+  const btn = document.getElementById('submitBtn');
+  const hasItems = Object.values(qtys).some(q => q > 0);
+  const hasSpot = mapLat !== null;
+  if(hasItems && hasSpot){
+    btn.disabled = false;
+    btn.textContent = dict[lang].submitReady;
+  } else {
+    btn.disabled = true;
+    btn.textContent = dict[lang].submitBtn;
+  }
+}
+
+async function submitOrder(){
+  const btn = document.getElementById('submitBtn');
+  btn.disabled = true;
+  btn.textContent = '...';
+
+  const orderedItems = items.filter(i => qtys[i.id] > 0);
+  const total = orderedItems.reduce((sum,i)=> sum + qtys[i.id]*i.price, 0);
+  const hours = Number(document.getElementById('hoursSlider').value) || 2;
+
+  const { data: order, error } = await sb.from('orders').insert({
+    map_lat: mapLat,
+    map_lng: mapLng,
+    is_preorder: isPreorder,
+    hours_from_now: isPreorder ? hours : null,
+    total_price: total,
+    status: 'pending', client_uid: customerToken, duration_hours: hours
+  }).select().single();
+
+  if(error){ console.error(error); btn.disabled=false; updateSubmitState(); return; }
+
+  const lineItems = orderedItems.map(i => ({
+    order_id: order.id,
+    item_id: i.id,
+    qty: qtys[i.id],
+    price_each: i.price
+  }));
+  await sb.from('order_items').insert(lineItems);
+
+  localStorage.setItem('beach_last_order', order.id);
+  document.getElementById('orderView').style.display = 'none';
+  document.getElementById('submitBar').style.display = 'none';
+  const flash = document.getElementById('confirmFlash');
+  flash.classList.remove('hidden');
+  flash.style.display = 'block';
+  setTimeout(async ()=>{
+    flash.style.display = 'none';
+    flash.classList.add('hidden');
+    await openDashboard(order.id, order);
+  }, 1600);
+}
+
+loadItems();
+startMap();
+setLang('es');
+loadCustomerState();
+loadWeather();
+
+// ---------------- TUTORIAL ----------------
+const tutSteps = {
+  es: [
+    { icon:'🍹', title:'¿Qué te gustaría?', body:'Elige tus sillas, sombrillas o mesas con los botones + y −.' },
+    { icon:'📍', title:'Marca tu lugar', body:'Toca el mapa donde estás sentado, o usa el botón 📍 para marcar tu ubicación actual automáticamente.' },
+    { icon:'⏰', title:'¿Ahora o más tarde?', body:'Puedes pedir para ahora mismo, o activar "Pedir para más tarde hoy" y elegir cuántas horas.' },
+    { icon:'🚀', title:'Envía tu pedido', body:'Toca "Enviar pedido" y pasarás a tu panel con un cronómetro en vivo hasta que llegue tu renta.' },
+    { icon:'💬', title:'Tu panel', body:'Ahí verás lo que pediste, el tiempo restante, y podrás escribirle mensajes al equipo directamente.' },
+    { icon:'🛎️', title:'¿Necesitas algo?', body:'En cualquier momento puedes tocar "Necesito ayuda" para avisarle al equipo que vengan a tu lugar.' }
+  ],
+  en: [
+    { icon:'🍹', title:'What would you like?', body:'Pick your chairs, umbrellas, or tables with the + and − buttons.' },
+    { icon:'📍', title:'Mark your spot', body:'Tap the map where you\'re sitting, or use the 📍 button to mark your current location automatically.' },
+    { icon:'⏰', title:'Now or later?', body:'Order for right now, or flip on "Order for later today" and pick how many hours.' },
+    { icon:'🚀', title:'Send your order', body:'Tap "Send order" and you\'ll land on your dashboard with a live timer until your rental arrives.' },
+    { icon:'💬', title:'Your dashboard', body:'See what you ordered, time remaining, and message the team directly from there.' },
+    { icon:'🛎️', title:'Need something?', body:'Anytime, tap "Need help" to flag the team over to your spot.' }
+  ]
+};
+let tutIndex = 0;
+
+function startTutorial(){
+  tutIndex = 0;
+  document.getElementById('tutOverlay').style.display = 'flex';
+  renderTutorialStep();
+}
+
+function renderTutorialStep(){
+  const steps = tutSteps[lang] || tutSteps.es;
+  const s = steps[tutIndex];
+  document.getElementById('tutIcon').textContent = s.icon;
+  document.getElementById('tutTitle').textContent = s.title;
+  document.getElementById('tutBody').textContent = s.body;
+  document.getElementById('tutDots').innerHTML = steps.map((_,i)=>
+    `<div class="tut-dot ${i===tutIndex ? 'active' : ''}"></div>`
+  ).join('');
+  document.getElementById('tutNextBtn').textContent = (tutIndex === steps.length-1)
+    ? (lang==='es' ? '¡Entendido!' : 'Got it!')
+    : (lang==='es' ? 'Siguiente' : 'Next');
+  document.getElementById('tutSkipBtn').textContent = lang==='es' ? 'Saltar' : 'Skip';
+}
+
+function nextTutorialStep(){
+  const steps = tutSteps[lang] || tutSteps.es;
+  if(tutIndex < steps.length-1){
+    tutIndex++;
+    renderTutorialStep();
+  } else {
+    closeTutorial();
+  }
+}
+
+function skipTutorial(){ closeTutorial(); }
+
+function closeTutorial(){
+  document.getElementById('tutOverlay').style.display = 'none';
+  localStorage.setItem('beach_tutorial_seen', '1');
+}
+
+if(!localStorage.getItem('beach_tutorial_seen')){
+  document.getElementById('tutOverlay').style.display = 'flex';
+  setTimeout(renderTutorialStep, 0);
+} else {
+  document.getElementById('tutOverlay').style.display = 'none';
+}
+
+// Keep the menu live — if the owner adds an item or changes a price/stock
+// while this page is already open, it updates automatically, no refresh needed.
+sb.channel('customer-menu-live')
+  .on('postgres_changes', { event:'*', schema:'public', table:'items' }, () => {
+    loadItems();
+  })
+  .subscribe();
+
+</script>
+</body>
+</html>
