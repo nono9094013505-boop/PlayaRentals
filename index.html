@@ -305,7 +305,7 @@ body::before{content:"";position:fixed;inset:0;pointer-events:none;z-index:-1;ba
 <script>
 // ---- CONFIGURE THESE TWO VALUES from your Supabase project settings ----
 const SUPABASE_URL = "https://puvdxldgotrnmlmxixqe.supabase.co";
-const SUPABASE_ANON_KEY = "YOUR_SUPABASE_ANON_KEY";
+const SUPABASE_ANON_KEY = "sb_publishable_cWZ1N860dKUKvnivGEHlCQ_9ayMmHgy";
 // --------------------------------------------------------------------
 
 const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
@@ -369,9 +369,9 @@ localStorage.setItem('beach_customer_token', customerToken);
 async function loadCustomerState(){
   const id=localStorage.getItem('beach_last_order'); if(!id) return;
   const {data:o}=await sb.from('orders').select('*').eq('id',id).single();
-  if(!o || ['cancelled','deleted'].includes(o.status)){localStorage.removeItem('beach_last_order');return;}
+  if(!o || ['cancelled'].includes(o.status)){localStorage.removeItem('beach_last_order');return;}
   const box=document.getElementById('returningStatus'); box.classList.remove('hidden');
-  const end=o.rental_end_at ? new Date(o.rental_end_at).getTime() : null;
+  const end=o.created_at && o.duration_hours ? new Date(o.created_at).getTime()+Number(o.duration_hours)*3600000 : null;
   const tick=()=>{ if(!end){box.innerHTML='<strong>Tu pedido</strong><br>'+o.status;return;}
     const ms=Math.max(0,end-Date.now()),h=Math.floor(ms/3600000),m=Math.floor(ms%3600000/60000),sec=Math.floor(ms%60000/1000);
     box.innerHTML='<div>Tiempo restante de tu renta</div><div class="status-timer">'+String(h).padStart(2,'0')+':'+String(m).padStart(2,'0')+':'+String(sec).padStart(2,'0')+'</div>'; };
@@ -379,7 +379,7 @@ async function loadCustomerState(){
 }
 async function requestService(){
   const orderId=localStorage.getItem('beach_last_order');
-  const {error}=await sb.from('service_requests').insert({order_id:orderId||null,customer_token:customerToken,status:'pending',message:'Customer requested assistance'});
+  const {error}=await sb.from('service_calls').insert({order_id:orderId||null});
   alert(error?'No se pudo enviar la solicitud.':'¡Solicitud de servicio enviada!');
 }
 async function loadWeather(){
@@ -507,14 +507,13 @@ async function submitOrder(){
   const total = orderedItems.reduce((sum,i)=> sum + qtys[i.id]*i.price, 0);
   const hours = isPreorder ? Number(document.getElementById('hoursSlider').value) : null;
 
-  const rentalEndAt = hours ? new Date(Date.now()+hours*3600000).toISOString() : null;
   const { data: order, error } = await sb.from('orders').insert({
     map_lat: mapLat,
     map_lng: mapLng,
     is_preorder: isPreorder,
     hours_from_now: hours,
     total_price: total,
-    status: 'pending', customer_token: customerToken, rental_end_at: rentalEndAt
+    status: 'pending', client_uid: customerToken, duration_hours: hours || 2
   }).select().single();
 
   if(error){ console.error(error); btn.disabled=false; updateSubmitState(); return; }
