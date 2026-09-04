@@ -414,7 +414,7 @@ function renderOrders(){
         ${order.is_preorder ? `<span class="pill pill-pre">Pedido anticipado · ${order.hours_from_now}h</span>` : ''}
         ${order.map_lat ? `<span class="pill pill-map" style="cursor:pointer;" onclick="showMap(${order.map_lat}, ${order.map_lng})">📍 Ver en mapa</span>` : ''}
         <div class="order-items">${itemsText}</div>
-        <div class="order-meta">${time} ${isDelivered ? '· Entregado' : '· Pendiente'} ${order.rental_end_at ? `<div class="timer" data-end="${order.rental_end_at}">⏳ calculando…</div>` : ''}</div>
+        <div class="order-meta">${time} ${isDelivered ? '· Entregado' : '· Pendiente'} ${order.created_at && order.duration_hours ? `<div class="timer" data-end="${order.created_at}" data-hours="${order.duration_hours}">⏳ calculando…</div>` : ''}</div>
         ${!isDelivered ? `
           <select class="worker-select" id="worker-${order.id}">
             <option value="">Asignar a trabajador…</option>
@@ -432,7 +432,7 @@ function renderOrders(){
   updateTimers();
 }
 
-function updateTimers(){document.querySelectorAll('.timer[data-end]').forEach(el=>{const ms=Math.max(0,new Date(el.dataset.end)-Date.now()),h=Math.floor(ms/3600000),m=Math.floor(ms%3600000/60000),s=Math.floor(ms%60000/1000);el.textContent='⏳ '+String(h).padStart(2,'0')+':'+String(m).padStart(2,'0')+':'+String(s).padStart(2,'0');});}
+function updateTimers(){document.querySelectorAll('.timer[data-end]').forEach(el=>{const ms=Math.max(0,new Date(el.dataset.end).getTime()+Number(el.dataset.hours||2)*3600000-Date.now()),h=Math.floor(ms/3600000),m=Math.floor(ms%3600000/60000),s=Math.floor(ms%60000/1000);el.textContent='⏳ '+String(h).padStart(2,'0')+':'+String(m).padStart(2,'0')+':'+String(s).padStart(2,'0');});}
 setInterval(updateTimers,1000);
 async function cancelOrder(id){if(!confirm('¿Cancelar este pedido?'))return;await sb.from('orders').update({status:'cancelled'}).eq('id',id);await loadOrders();}
 async function deleteOrder(id){if(!confirm('¿Eliminar permanentemente este pedido?'))return;await sb.from('order_items').delete().eq('order_id',id);await sb.from('orders').delete().eq('id',id);await loadOrders();}
