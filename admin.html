@@ -35,9 +35,11 @@
   .pill{display:inline-block;font-size:10px;font-weight:800;padding:3px 8px;border-radius:999px;margin:0 5px 5px 0;}
   .pill-pre{background:#FCE9D0;color:#95591A;} .pill-map{background:#DCEFEE;color:var(--teal-deep);cursor:pointer;}
   .pill-service{background:#FDE0DD;color:var(--red);cursor:pointer;}
-  .overhead-pill{background:var(--white);border-radius:999px;padding:6px 12px;font-size:12px;font-weight:700;color:var(--teal-deep);box-shadow:0 2px 6px rgba(32,48,46,0.06);display:flex;align-items:center;gap:6px;}
-  .overhead-pill .dot{width:8px;height:8px;border-radius:50%;background:var(--green);}
+  .overhead-pill{background:var(--white);border-radius:14px;padding:8px 14px;font-size:12px;font-weight:700;color:var(--teal-deep);box-shadow:0 2px 6px rgba(32,48,46,0.06);display:flex;align-items:center;gap:8px;}
+  .overhead-pill .dot{width:8px;height:8px;border-radius:50%;background:var(--green);flex-shrink:0;}
   .overhead-pill.low .dot{background:var(--coral);}
+  .overhead-pill .count{font-family:'Fraunces',serif;font-weight:700;font-size:15px;color:var(--teal-deep);}
+  .overhead-pill.low .count{color:var(--coral);}
   .countdown-pill{background:var(--teal-deep);color:white;font-family:'Fraunces',serif;font-weight:700;}
   select.worker-select{margin-top:8px;padding:8px 10px;border-radius:10px;border:1px solid #DDD3BB;font-size:13px;width:100%;}
   .edit-row{display:flex;gap:8px;margin-top:8px;}
@@ -92,6 +94,30 @@
   .danger-zone p{font-size:12px;color:var(--grey);margin:0 0 10px;}
   #qrBox{text-align:center;padding:10px;}
   .hidden{display:none !important;}
+
+  /* ADMIN TUTORIAL + SETUP WIZARD */
+  .atut-overlay{position:fixed;inset:0;background:rgba(10,74,77,0.6);display:flex;align-items:flex-end;justify-content:center;z-index:3000;}
+  .atut-card{background:var(--white);border-radius:24px 24px 0 0;padding:26px 22px calc(26px + env(safe-area-inset-bottom));width:100%;max-width:520px;box-shadow:0 -8px 30px rgba(0,0,0,0.2);}
+  .atut-icon{font-size:34px;margin-bottom:8px;}
+  .atut-title{font-family:'Fraunces',serif;font-weight:700;font-size:20px;color:var(--teal-deep);margin:0 0 6px;}
+  .atut-body{font-size:14px;color:var(--ink);line-height:1.5;margin:0 0 20px;}
+  .atut-dots{display:flex;gap:6px;justify-content:center;margin-bottom:16px;}
+  .atut-dot{width:7px;height:7px;border-radius:50%;background:var(--sand);}
+  .atut-dot.active{background:var(--teal);width:20px;border-radius:4px;}
+  .atut-btn-row{display:flex;gap:10px;}
+  .atut-skip{background:none;border:none;color:var(--teal);font-weight:700;font-size:14px;cursor:pointer;padding:12px;}
+  .atut-next{flex:1;background:var(--coral);color:white;border:none;border-radius:14px;padding:14px;font-weight:800;font-size:15px;cursor:pointer;}
+  .help-fab-admin{position:fixed;bottom:20px;right:16px;width:44px;height:44px;border-radius:50%;background:var(--teal-deep);color:white;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:17px;box-shadow:0 4px 14px rgba(10,67,72,0.35);cursor:pointer;z-index:500;border:none;}
+  .wizard-overlay{position:fixed;inset:0;background:rgba(10,74,77,0.65);display:flex;align-items:center;justify-content:center;z-index:2500;padding:20px;}
+  .wizard-card{background:var(--white);border-radius:20px;padding:24px;width:100%;max-width:420px;max-height:88vh;overflow-y:auto;}
+  .wizard-card h2{font-family:'Fraunces',serif;color:var(--teal-deep);font-size:20px;margin:0 0 6px;}
+  .wizard-card p{color:var(--grey);font-size:13px;margin:0 0 16px;}
+  .wizard-row{display:flex;gap:8px;align-items:center;margin-bottom:10px;background:var(--sand);border-radius:12px;padding:10px 12px;}
+  .wizard-row .wizard-emoji{font-size:20px;}
+  .wizard-row .wizard-label{flex:1;font-weight:700;font-size:14px;}
+  .wizard-row input{width:64px;padding:8px;border-radius:8px;border:1px solid #DDD3BB;font-size:14px;text-align:center;}
+  .wizard-finish{width:100%;background:var(--green);color:white;border:none;border-radius:12px;padding:14px;font-weight:800;font-size:15px;cursor:pointer;margin-top:8px;}
+  .wizard-later{width:100%;background:none;color:var(--grey);border:none;padding:10px;font-size:13px;cursor:pointer;}
 </style>
 </head>
 <body>
@@ -125,7 +151,12 @@
   <div class="tab" data-panel="ajustes" onclick="switchTab('ajustes')">Ajustes</div>
 </div>
 
-<div id="overheadBar" style="max-width:900px;margin:10px auto 0;padding:0 16px;display:flex;gap:8px;flex-wrap:wrap;"></div>
+<div style="max-width:900px;margin:12px auto 0;padding:0 16px;display:flex;align-items:center;gap:6px;">
+  <span style="width:7px;height:7px;border-radius:50%;background:#2E9A5D;display:inline-block;animation:pulseLive 1.4s ease-in-out infinite;"></span>
+  <span style="font-size:11px;font-weight:800;color:var(--teal-deep);letter-spacing:0.03em;text-transform:uppercase;" id="invLiveLabel">Inventario en vivo</span>
+</div>
+<div id="overheadBar" style="max-width:900px;margin:8px auto 0;padding:0 16px;display:flex;gap:8px;flex-wrap:wrap;"></div>
+<style>@keyframes pulseLive{0%,100%{opacity:1;transform:scale(1);}50%{opacity:0.4;transform:scale(1.3);}}</style>
 
 <main>
   <div class="panel active" id="panel-pedidos">
@@ -194,6 +225,34 @@
   </div>
 </main>
 
+<div class="atut-overlay hidden" id="atutOverlay">
+  <div class="atut-card">
+    <div class="atut-icon" id="atutIcon">📋</div>
+    <h2 class="atut-title" id="atutTitle"></h2>
+    <p class="atut-body" id="atutBody"></p>
+    <div class="atut-dots" id="atutDots"></div>
+    <div class="atut-btn-row">
+      <button class="atut-skip" id="atutSkipBtn" onclick="skipAdminTutorial()">Saltar</button>
+      <button class="atut-next" id="atutNextBtn" onclick="nextAdminTutorialStep()">Siguiente</button>
+    </div>
+  </div>
+</div>
+<button class="help-fab-admin" onclick="startAdminTutorial()" title="Ver tutorial">?</button>
+
+<div class="wizard-overlay hidden" id="wizardOverlay">
+  <div class="wizard-card">
+    <h2>🏖️ Configura tu inventario</h2>
+    <p>Antes de recibir pedidos, dinos cuánto tienes de cada artículo. Puedes ajustar esto cuando quieras desde la pestaña Inventario.</p>
+    <div id="wizardRows">
+      <div class="wizard-row"><span class="wizard-emoji">🪑</span><span class="wizard-label">Sillas</span><input type="number" min="0" id="wizQty-Sillas" placeholder="0"><input type="number" min="0" id="wizPrice-Sillas" placeholder="$" style="width:56px;"></div>
+      <div class="wizard-row"><span class="wizard-emoji">⛱️</span><span class="wizard-label">Sombrillas</span><input type="number" min="0" id="wizQty-Sombrillas" placeholder="0"><input type="number" min="0" id="wizPrice-Sombrillas" placeholder="$" style="width:56px;"></div>
+      <div class="wizard-row"><span class="wizard-emoji">🍽️</span><span class="wizard-label">Mesas</span><input type="number" min="0" id="wizQty-Mesas" placeholder="0"><input type="number" min="0" id="wizPrice-Mesas" placeholder="$" style="width:56px;"></div>
+    </div>
+    <button class="wizard-finish" onclick="finishWizard()">Guardar y continuar</button>
+    <button class="wizard-later" onclick="closeWizard()">Configurar más tarde</button>
+  </div>
+</div>
+
 <div id="mapModal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.6);z-index:999;align-items:center;justify-content:center;">
   <div style="background:#fff;border-radius:16px;padding:14px;width:90%;max-width:420px;">
     <div id="modalMap" style="width:100%;height:320px;border-radius:10px;"></div>
@@ -245,7 +304,10 @@ function enterApp(){
   document.getElementById('superPassRow').classList.toggle('hidden', !isSuperAdmin);
   document.getElementById('customerUrlInput').value = adminSettings.customer_url || '';
   renderQR();
-  loadAll();
+  loadAll().then(()=>{
+    if(items.length === 0) showWizard();
+    else if(!localStorage.getItem('beach_admin_tutorial_seen')) startAdminTutorial();
+  });
   startCountdownLoop();
 }
 
@@ -317,7 +379,7 @@ function renderOrders(){
   list.innerHTML = '';
   ordered.forEach(order=>{
     const lineItems = orderItemsMap[order.id] || [];
-    const itemsText = lineItems.map(li=>{ const item=items.find(i=>i.id===li.item_id); return `${li.qty}× ${item?item.name:'?'}`; }).join(', ');
+    const itemsText = lineItems.map(li=>{ const item=items.find(i=>i.id===li.item_id); return `${li.qty}x ${item?item.name:'?'}`; }).join(', ');
     const time = new Date(order.created_at).toLocaleTimeString('es-MX', {hour:'2-digit',minute:'2-digit'});
     const worker = workers.find(w=>w.id===order.worker_id);
 
@@ -500,7 +562,11 @@ function renderOverhead(){
   if(items.length===0){ bar.innerHTML=''; return; }
   bar.innerHTML = items.map(item=>{
     const low = item.available_qty <= Math.max(1, Math.round(item.total_qty*0.15));
-    return `<div class="overhead-pill ${low?'low':''}"><span class="dot"></span>${item.name}: ${item.available_qty}/${item.total_qty}</div>`;
+    return `<div class="overhead-pill ${low?'low':''}">
+      <span class="dot"></span>
+      <span>${item.name}</span>
+      <span class="count">${item.available_qty}</span><span style="color:var(--grey);font-weight:600;">/${item.total_qty}</span>
+    </div>`;
   }).join('');
 }
 
@@ -693,6 +759,64 @@ sb.channel('admin-live')
   .on('postgres_changes', { event:'*', schema:'public', table:'items' }, () => loadItems())
   .on('postgres_changes', { event:'*', schema:'public', table:'workers' }, () => loadWorkers())
   .subscribe();
+
+// ---------------- ADMIN TUTORIAL ----------------
+const adminTutSteps = [
+  { icon:'📋', title:'Pestaña Pedidos', body:'Aquí llegan los pedidos nuevos en vivo. Asigna un trabajador, ajusta precio/horas si negociaste, y marca como entregado. Cuando regrese la sombrilla o silla, márcalo como devuelto.' },
+  { icon:'📦', title:'Pestaña Inventario', body:'Ve cuánto tienes disponible de cada artículo en todo momento, cambia precios, agrega o elimina artículos, y el contador de arriba se actualiza solo en vivo.' },
+  { icon:'👷', title:'Pestaña Trabajadores', body:'Agrega quién está trabajando hoy para poder asignarles pedidos. Elimina a alguien si ya no está en turno.' },
+  { icon:'💰', title:'Pestaña Resumen', body:'Mira cuánto efectivo se espera hoy y cuánto entregó cada trabajador. Descarga un CSV al final del día.' },
+  { icon:'💬', title:'Mensajes y alertas', body:'Cada pedido tiene un botón de Mensajes para chatear con el cliente. Si alguien pide ayuda, escucharás una alerta y verá una etiqueta roja 🆘.' },
+  { icon:'⚙️', title:'Ajustes', body:'Ahí está tu código QR para clientes, el enlace de pedidos, cambio de contraseña, y (si eres super admin) el botón para reiniciar todos los datos.' }
+];
+let atutIndex = 0;
+function startAdminTutorial(){
+  atutIndex = 0;
+  document.getElementById('atutOverlay').classList.remove('hidden');
+  renderAdminTutorialStep();
+}
+function renderAdminTutorialStep(){
+  const s = adminTutSteps[atutIndex];
+  document.getElementById('atutIcon').textContent = s.icon;
+  document.getElementById('atutTitle').textContent = s.title;
+  document.getElementById('atutBody').textContent = s.body;
+  document.getElementById('atutDots').innerHTML = adminTutSteps.map((_,i)=>`<div class="atut-dot ${i===atutIndex?'active':''}"></div>`).join('');
+  document.getElementById('atutNextBtn').textContent = (atutIndex === adminTutSteps.length-1) ? '¡Entendido!' : 'Siguiente';
+}
+function nextAdminTutorialStep(){
+  if(atutIndex < adminTutSteps.length-1){ atutIndex++; renderAdminTutorialStep(); }
+  else closeAdminTutorial();
+}
+function skipAdminTutorial(){ closeAdminTutorial(); }
+function closeAdminTutorial(){
+  document.getElementById('atutOverlay').classList.add('hidden');
+  localStorage.setItem('beach_admin_tutorial_seen', '1');
+}
+
+// ---------------- INVENTORY SETUP WIZARD ----------------
+function showWizard(){ document.getElementById('wizardOverlay').classList.remove('hidden'); }
+function closeWizard(){
+  document.getElementById('wizardOverlay').classList.add('hidden');
+  if(!localStorage.getItem('beach_admin_tutorial_seen')) startAdminTutorial();
+}
+async function finishWizard(){
+  const rows = [
+    { name:'Sillas', qtyId:'wizQty-Sillas', priceId:'wizPrice-Sillas' },
+    { name:'Sombrillas', qtyId:'wizQty-Sombrillas', priceId:'wizPrice-Sombrillas' },
+    { name:'Mesas', qtyId:'wizQty-Mesas', priceId:'wizPrice-Mesas' }
+  ];
+  let sort = 1;
+  for(const r of rows){
+    const qty = Number(document.getElementById(r.qtyId).value) || 0;
+    const price = Number(document.getElementById(r.priceId).value) || 0;
+    if(qty > 0){
+      await sb.from('items').insert({ name:r.name, price, total_qty:qty, available_qty:qty, sort_order: sort });
+    }
+    sort++;
+  }
+  await loadItems();
+  closeWizard();
+}
 
 checkSession();
 </script>

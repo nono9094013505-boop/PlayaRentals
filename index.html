@@ -278,6 +278,18 @@ body::before{content:"";position:fixed;inset:0;pointer-events:none;z-index:-1;ba
 .tropical-decor{position:fixed;top:82px;right:4vw;font-size:72px;opacity:.18;pointer-events:none;transform:rotate(-12deg)}
 .weather-card{margin:0 0 12px;background:rgba(255,255,255,.86);border-radius:16px;padding:10px 14px;display:flex;justify-content:space-between;align-items:center;font-size:13px}
 .service-btn{width:100%;margin-top:12px;background:var(--teal);color:#fff;border:0;border-radius:14px;padding:14px;font-weight:700;font-size:15px}.customer-status{margin-top:18px}.status-timer{font-family:'Fraunces',serif;font-size:28px;color:var(--teal-deep);font-weight:700}
+
+.my-location-btn{position:absolute;top:10px;right:10px;width:40px;height:40px;border-radius:10px;background:var(--white);border:none;box-shadow:0 2px 8px rgba(31,42,40,0.2);font-size:18px;display:flex;align-items:center;justify-content:center;cursor:pointer;z-index:400;}
+.dash-order-items{font-size:14px;line-height:1.7;margin-bottom:4px;}
+.dash-timer-wrap{text-align:center;padding:18px 0 6px;}
+.msg-thread-c{max-height:220px;overflow-y:auto;display:flex;flex-direction:column;gap:8px;margin:10px 0;padding:4px 2px;}
+.msg-bubble-c{max-width:80%;padding:9px 13px;border-radius:14px;font-size:13px;line-height:1.4;}
+.msg-admin-c{align-self:flex-start;background:var(--sand-deep);color:var(--ink);}
+.msg-client-c{align-self:flex-end;background:var(--teal);color:white;}
+.msg-input-row-c{display:flex;gap:8px;}
+.msg-input-row-c input{flex:1;padding:11px;border-radius:10px;border:1px solid #DDD3BB;font-size:14px;}
+.msg-input-row-c button{background:var(--teal);color:white;border:none;border-radius:10px;padding:0 16px;font-weight:700;cursor:pointer;}
+.new-order-btn{width:100%;background:none;border:2px solid var(--teal);color:var(--teal-deep);border-radius:14px;padding:12px;font-weight:700;font-size:14px;cursor:pointer;margin-top:16px;}
 </style>
 </head>
 <body><div class="tropical-decor">🌴</div><div class="ocean"></div>
@@ -308,7 +320,6 @@ body::before{content:"";position:fixed;inset:0;pointer-events:none;z-index:-1;ba
 
 <main>
   <div class="weather-card">🌤️ <span id="weatherText">Clima de playa</span><strong id="weatherTemp">--°</strong></div>
-  <div id="returningStatus" class="card customer-status hidden"></div>
   <div id="orderView">
     <div class="section-title" data-t="whatDoYouWant">What would you like?</div>
     <div class="card" id="itemsList"><!-- items injected here --></div>
@@ -316,6 +327,7 @@ body::before{content:"";position:fixed;inset:0;pointer-events:none;z-index:-1;ba
     <div class="section-title" data-t="whereAreYou">Where are you?</div>
     <div class="map-wrap" id="mapWrap">
       <div id="leafletMap" style="width:100%;height:100%;"></div>
+      <button class="my-location-btn" id="myLocationBtn" onclick="useMyLocation()" title="Usar mi ubicación">📍</button>
       <div class="map-hint map-hint-pulse" id="mapHint" data-t="tapMap">👆 Tap anywhere on the map to mark exactly where you're sitting</div>
     </div>
 
@@ -338,12 +350,35 @@ body::before{content:"";position:fixed;inset:0;pointer-events:none;z-index:-1;ba
     <button class="service-btn" onclick="requestService()">🛎️ Necesito ayuda</button>
   </div>
 
-  <div class="confirm" id="confirmView">
+  <div class="confirm hidden" id="confirmFlash">
     <div class="check">
       <svg width="30" height="30" viewBox="0 0 24 24" fill="none"><path d="M5 13l4 4L19 7" stroke="white" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/></svg>
     </div>
     <h2 data-t="confirmTitle">Order sent!</h2>
     <p data-t="confirmBody">Someone will bring your order to your spot shortly.</p>
+  </div>
+
+  <div id="dashboardView" class="hidden">
+    <div class="section-title" id="dashTitle" data-t="dashTitle">Tu pedido</div>
+    <div class="card">
+      <div class="dash-order-items" id="dashItems"></div>
+      <div class="dash-timer-wrap">
+        <div style="font-size:12px;color:#6B7B78;" id="dashTimerLabel">Tiempo restante</div>
+        <div class="status-timer" id="dashTimer">--:--:--</div>
+      </div>
+    </div>
+
+    <div class="section-title" id="dashMsgTitle" data-t="dashMsgTitle">Mensajes</div>
+    <div class="card">
+      <div class="msg-thread-c" id="dashMsgThread"></div>
+      <div class="msg-input-row-c">
+        <input type="text" id="dashMsgInput" placeholder="Escribe un mensaje...">
+        <button onclick="sendCustomerMessage()">➤</button>
+      </div>
+    </div>
+
+    <button class="service-btn" onclick="requestService()" id="dashServiceBtn" data-t="dashServiceBtn">🛎️ Necesito ayuda</button>
+    <button class="new-order-btn" onclick="startNewOrder()" id="dashNewOrderBtn" data-t="dashNewOrderBtn">＋ Hacer otro pedido</button>
   </div>
 </main>
 
@@ -385,7 +420,11 @@ const dict = {
     submitReady: "Send order",
     confirmTitle: "Order sent!",
     confirmBody: "Someone will bring your order to your spot shortly.",
-    hrs: "hrs"
+    hrs: "hrs",
+    dashTitle: "Your order",
+    dashMsgTitle: "Messages",
+    dashServiceBtn: "🛎️ I need help",
+    dashNewOrderBtn: "＋ Place another order"
   },
   es: {
     brand: "Pedido de Playa",
@@ -399,7 +438,11 @@ const dict = {
     submitReady: "Enviar pedido",
     confirmTitle: "¡Pedido enviado!",
     confirmBody: "Alguien llevará tu pedido a tu lugar en breve.",
-    hrs: "hrs"
+    hrs: "hrs",
+    dashTitle: "Tu pedido",
+    dashMsgTitle: "Mensajes",
+    dashServiceBtn: "🛎️ Necesito ayuda",
+    dashNewOrderBtn: "＋ Hacer otro pedido"
   }
 };
 
@@ -421,16 +464,126 @@ function setLang(l){
 const customerToken = localStorage.getItem('beach_customer_token') || (crypto.randomUUID ? crypto.randomUUID() : String(Date.now())+Math.random());
 localStorage.setItem('beach_customer_token', customerToken);
 
+let dashOrderId = null;
+let dashTickInterval = null;
+let dashMsgSub = null;
+
 async function loadCustomerState(){
   const id=localStorage.getItem('beach_last_order'); if(!id) return;
   const {data:o}=await sb.from('orders').select('*').eq('id',id).single();
-  if(!o || ['cancelled'].includes(o.status)){localStorage.removeItem('beach_last_order');return;}
-  const box=document.getElementById('returningStatus'); box.classList.remove('hidden');
-  const end=o.created_at && o.duration_hours ? new Date(o.created_at).getTime()+Number(o.duration_hours)*3600000 : null;
-  const tick=()=>{ if(!end){box.innerHTML='<strong>Tu pedido</strong><br>'+o.status;return;}
-    const ms=Math.max(0,end-Date.now()),h=Math.floor(ms/3600000),m=Math.floor(ms%3600000/60000),sec=Math.floor(ms%60000/1000);
-    box.innerHTML='<div>Tiempo restante de tu renta</div><div class="status-timer">'+String(h).padStart(2,'0')+':'+String(m).padStart(2,'0')+':'+String(sec).padStart(2,'0')+'</div>'; };
-  tick(); setInterval(tick,1000);
+  if(!o || ['cancelled','returned'].includes(o.status)){ localStorage.removeItem('beach_last_order'); return; }
+  await openDashboard(id, o);
+}
+
+async function openDashboard(orderId, orderRow){
+  dashOrderId = orderId;
+  let order = orderRow;
+  if(!order){ const {data:o}=await sb.from('orders').select('*').eq('id',orderId).single(); order = o; }
+  if(!order) return;
+
+  document.getElementById('orderView').style.display = 'none';
+  document.getElementById('submitBar').style.display = 'none';
+  document.getElementById('dashboardView').classList.remove('hidden');
+
+  const {data: lineItemsRaw} = await sb.from('order_items').select('*').eq('order_id', orderId);
+  const dashItemsEl = document.getElementById('dashItems');
+  dashItemsEl.innerHTML = (lineItemsRaw||[]).map(li=>{
+    const item = items.find(i=>i.id===li.item_id);
+    return `<div>${li.qty}x ${item ? item.name : '?'}</div>`;
+  }).join('') + `<div style="margin-top:6px;font-weight:700;color:var(--teal-deep);">$${order.total_price}</div>`;
+
+  const end = order.status === 'delivered' && order.delivered_at
+    ? new Date(order.delivered_at).getTime() + Number(order.duration_hours||2)*3600000
+    : null;
+
+  if(dashTickInterval) clearInterval(dashTickInterval);
+  const tick = ()=>{
+    const timerEl = document.getElementById('dashTimer');
+    const labelEl = document.getElementById('dashTimerLabel');
+    if(order.status !== 'delivered'){
+      labelEl.textContent = lang==='es' ? 'Tu pedido está pendiente' : 'Your order is pending';
+      timerEl.textContent = '--:--:--';
+      return;
+    }
+    labelEl.textContent = lang==='es' ? 'Tiempo restante de tu renta' : 'Time left on your rental';
+    const ms = Math.max(0, end - Date.now());
+    const h = Math.floor(ms/3600000), m = Math.floor(ms%3600000/60000), sec = Math.floor(ms%60000/1000);
+    timerEl.textContent = `${String(h).padStart(2,'0')}:${String(m).padStart(2,'0')}:${String(sec).padStart(2,'0')}`;
+  };
+  tick();
+  dashTickInterval = setInterval(async ()=>{
+    tick();
+  }, 1000);
+
+  loadCustomerMessages(orderId);
+  subscribeCustomerMessages(orderId);
+  subscribeOrderUpdates(orderId);
+}
+
+let dashOrderSub = null;
+function subscribeOrderUpdates(orderId){
+  if(dashOrderSub) sb.removeChannel(dashOrderSub);
+  dashOrderSub = sb.channel('customer-order-'+orderId)
+    .on('postgres_changes', { event:'UPDATE', schema:'public', table:'orders', filter:`id=eq.${orderId}` }, (payload)=>{
+      if(['cancelled','returned'].includes(payload.new.status)){
+        startNewOrder();
+      } else {
+        openDashboard(orderId, payload.new);
+      }
+    }).subscribe();
+}
+
+function startNewOrder(){
+  localStorage.removeItem('beach_last_order');
+  if(dashTickInterval) clearInterval(dashTickInterval);
+  if(dashMsgSub) sb.removeChannel(dashMsgSub);
+  if(dashOrderSub) sb.removeChannel(dashOrderSub);
+  document.getElementById('dashboardView').classList.add('hidden');
+  document.getElementById('orderView').style.display = 'block';
+  document.getElementById('submitBar').style.display = 'block';
+}
+
+async function loadCustomerMessages(orderId){
+  const {data} = await sb.from('messages').select('*').eq('order_id', orderId).order('created_at');
+  const thread = document.getElementById('dashMsgThread');
+  if(!thread) return;
+  thread.innerHTML = '';
+  (data||[]).forEach(m=>{
+    const b = document.createElement('div');
+    b.className = 'msg-bubble-c ' + (m.sender==='admin' ? 'msg-admin-c' : 'msg-client-c');
+    b.textContent = m.body;
+    thread.appendChild(b);
+  });
+  thread.scrollTop = thread.scrollHeight;
+}
+
+function subscribeCustomerMessages(orderId){
+  if(dashMsgSub) sb.removeChannel(dashMsgSub);
+  dashMsgSub = sb.channel('customer-msg-'+orderId)
+    .on('postgres_changes', { event:'INSERT', schema:'public', table:'messages', filter:`order_id=eq.${orderId}` }, ()=>{
+      loadCustomerMessages(orderId);
+    }).subscribe();
+}
+
+async function sendCustomerMessage(){
+  const input = document.getElementById('dashMsgInput');
+  const body = input.value.trim();
+  if(!body || !dashOrderId) return;
+  input.value = '';
+  await sb.from('messages').insert({ order_id: dashOrderId, sender:'client', body });
+  await loadCustomerMessages(dashOrderId);
+}
+
+function useMyLocation(){
+  if(!navigator.geolocation) return;
+  const btn = document.getElementById('myLocationBtn');
+  btn.textContent = '…';
+  navigator.geolocation.getCurrentPosition(pos=>{
+    const {latitude, longitude} = pos.coords;
+    if(lmap) lmap.setView([latitude, longitude], 19);
+    dropPin(latitude, longitude);
+    btn.textContent = '📍';
+  }, ()=>{ btn.textContent = '📍'; }, { enableHighAccuracy:true, timeout:6000 });
 }
 async function requestService(){
   const orderId=localStorage.getItem('beach_last_order');
@@ -604,7 +757,14 @@ async function submitOrder(){
   localStorage.setItem('beach_last_order', order.id);
   document.getElementById('orderView').style.display = 'none';
   document.getElementById('submitBar').style.display = 'none';
-  document.getElementById('confirmView').style.display = 'block';
+  const flash = document.getElementById('confirmFlash');
+  flash.classList.remove('hidden');
+  flash.style.display = 'block';
+  setTimeout(async ()=>{
+    flash.style.display = 'none';
+    flash.classList.add('hidden');
+    await openDashboard(order.id, order);
+  }, 1600);
 }
 
 loadItems();
@@ -617,17 +777,19 @@ loadWeather();
 const tutSteps = {
   es: [
     { icon:'🍹', title:'¿Qué te gustaría?', body:'Elige tus sillas, sombrillas o mesas con los botones + y −.' },
-    { icon:'📍', title:'Marca tu lugar', body:'Toca el mapa donde estás sentado para que sepamos exactamente dónde llevar tu pedido.' },
+    { icon:'📍', title:'Marca tu lugar', body:'Toca el mapa donde estás sentado, o usa el botón 📍 para marcar tu ubicación actual automáticamente.' },
     { icon:'⏰', title:'¿Ahora o más tarde?', body:'Puedes pedir para ahora mismo, o activar "Pedir para más tarde hoy" y elegir cuántas horas.' },
-    { icon:'🚀', title:'Envía tu pedido', body:'Toca "Enviar pedido" y verás un cronómetro en vivo hasta que llegue.' },
-    { icon:'🛎️', title:'¿Necesitas algo?', body:'Una vez tu pedido esté en camino, puedes tocar "Necesito ayuda" en cualquier momento para avisarle al equipo.' }
+    { icon:'🚀', title:'Envía tu pedido', body:'Toca "Enviar pedido" y pasarás a tu panel con un cronómetro en vivo hasta que llegue tu renta.' },
+    { icon:'💬', title:'Tu panel', body:'Ahí verás lo que pediste, el tiempo restante, y podrás escribirle mensajes al equipo directamente.' },
+    { icon:'🛎️', title:'¿Necesitas algo?', body:'En cualquier momento puedes tocar "Necesito ayuda" para avisarle al equipo que vengan a tu lugar.' }
   ],
   en: [
     { icon:'🍹', title:'What would you like?', body:'Pick your chairs, umbrellas, or tables with the + and − buttons.' },
-    { icon:'📍', title:'Mark your spot', body:'Tap the map where you\'re sitting so we know exactly where to bring your order.' },
+    { icon:'📍', title:'Mark your spot', body:'Tap the map where you\'re sitting, or use the 📍 button to mark your current location automatically.' },
     { icon:'⏰', title:'Now or later?', body:'Order for right now, or flip on "Order for later today" and pick how many hours.' },
-    { icon:'🚀', title:'Send your order', body:'Tap "Send order" and you\'ll see a live timer until it arrives.' },
-    { icon:'🛎️', title:'Need something?', body:'Once your order is out, you can tap "Need help" anytime to flag the team.' }
+    { icon:'🚀', title:'Send your order', body:'Tap "Send order" and you\'ll land on your dashboard with a live timer until your rental arrives.' },
+    { icon:'💬', title:'Your dashboard', body:'See what you ordered, time remaining, and message the team directly from there.' },
+    { icon:'🛎️', title:'Need something?', body:'Anytime, tap "Need help" to flag the team over to your spot.' }
   ]
 };
 let tutIndex = 0;
