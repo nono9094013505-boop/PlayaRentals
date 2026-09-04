@@ -1,0 +1,79 @@
+name: Final admin fix
+on:
+  push:
+    paths:
+      - '.github/workflows/one-time-fix.yml'
+permissions:
+  contents: write
+jobs:
+  fix:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Patch admin
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          import re
+          p=Path('admin.html')
+          s=p.read_text(encoding='utf-8')
+          s=s.replace("const today = new Date().toISOString().slice(0,10);", "const today = new Intl.DateTimeFormat('en-CA',{year:'numeric',month:'2-digit',day:'2-digit'}).format(new Date());")
+          s=s.replace("sessionStorage.setItem('beach_admin_logged_in', isSuperAdmin ? 'super' : 'admin');", "localStorage.setItem('beach_admin_logged_in', isSuperAdmin ? 'super' : 'admin'); sessionStorage.setItem('beach_admin_logged_in', isSuperAdmin ? 'super' : 'admin');")
+          s=s.replace("sessionStorage.removeItem('beach_admin_logged_in');", "sessionStorage.removeItem('beach_admin_logged_in'); localStorage.removeItem('beach_admin_logged_in');")
+          s=s.replace("const s = sessionStorage.getItem('beach_admin_logged_in');", "const s = localStorage.getItem('beach_admin_logged_in') || sessionStorage.getItem('beach_admin_logged_in');")
+          # Make loadAll visibly report failures.
+          s=s.replace("async function loadAll(){ await Promise.all([loadItems(), loadWorkers(), loadOrders()]); }", "async function loadAll(){ const r=await Promise.all([loadItems(), loadWorkers(), loadOrders()]); if(r.some(x=>x===false)) alert('No se pudieron cargar todos los datos. Revisa la conexión con Supabase.'); return r; }")
+          # Replace delete order with child-first delete.
+          s=re.sub(r"async function deleteOrder\(orderId\)\{.*?\n\}\n\n// ---------------- MESSAGES", """async function deleteOrder(orderId){
+  if(!confirm('¿Seguro que quieres eliminar este pedido? Esto no se puede deshacer.')) return;
+  for(const table of ['messages','service_calls','order_items']){
+    const {error}=await sb.from(table).delete().eq('order_id',orderId);
+    if(error){alert('No se pudo eliminar: '+error.message);return;}
+  }
+  const {error}=await sb.from('orders').delete().eq('id',orderId);
+  if(error){alert('No se pudo eliminar: '+error.message);return;}
+  await loadOrders();
+}
+
+// ---------------- MESSAGES""", s, count=1, flags=re.S)
+          # Replace reset with true full wipe while retaining admin password/settings.
+          reset="""async function resetAllData(){
+  if(!isSuperAdmin) return;
+  if(!confirm('⚠️ BORRAR TODO: se eliminarán pedidos, artículos del inventario, trabajadores, mensajes y llamadas de servicio.')) return;
+  if(prompt('Escribe BORRAR TODO para confirmar:') !== 'BORRAR TODO') return;
+  for(const table of ['messages','service_calls','order_items','orders','workers','items']){
+    const {error}=await sb.from(table).delete().neq('id','00000000-0000-0000-0000-000000000000');
+    if(error){alert('El reinicio se detuvo en '+table+': '+error.message);return;}
+  }
+  orders=[]; items=[]; workers=[]; orderItemsMap={}; openMsgOrderId=null;
+  localStorage.removeItem('beach_admin_tutorial_seen');
+  renderOrders(); renderInventory(); renderWorkers(); renderSummary(); updatePendingBadge();
+  alert('✅ Todo fue borrado. El sistema quedó completamente limpio.');
+  showWizard();
+}
+
+// ---------------- REALTIME"""
+          s,n=re.subn(r"async function resetAllData\(\)\{.*?\n\}\n\n// ---------------- REALTIME", reset, s, count=1, flags=re.S)
+          # Load message threads for all orders on entry and refresh them periodically.
+          marker="function updateAllCountdowns(){"
+          helper="""async function refreshVisibleMessages(){
+  for(const o of orders){
+    await loadMessagesForOrder(o.id);
+  }
+}
+
+"""
+          if marker in s and 'async function refreshVisibleMessages' not in s:
+              s=s.replace(marker, helper+marker, 1)
+          s=s.replace("startCountdownLoop();\n}", "startCountdownLoop();\n  refreshVisibleMessages();\n}", 1)
+          p.write_text(s,encoding='utf-8')
+          PY
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add admin.html
+          git diff --cached --quiet || (git commit -m 'Fix admin login messages and reset' && git push)
+      - name: Remove temporary workflow
+        run: |
+          git rm .github/workflows/one-time-fix.yml
+          git commit -m 'Remove temporary deployment workflow'
+          git push
