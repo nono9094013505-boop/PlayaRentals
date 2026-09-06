@@ -319,7 +319,7 @@ async function doLogin(){
     return;
   }
   document.getElementById('loginPassword').value = '';
-  sessionStorage.setItem('beach_admin_session', '1');
+  localStorage.setItem('beach_admin_session', '1');
   enterApp();
 }
 
@@ -337,13 +337,13 @@ function enterApp(){
 }
 
 function logout(){
-  sessionStorage.removeItem('beach_admin_session');
+  localStorage.removeItem('beach_admin_session');
   location.reload();
 }
 
 function checkSession(){
   localStorage.removeItem('beach_admin_logged_in');
-  if(sessionStorage.getItem('beach_admin_session') === '1') enterApp();
+  if(localStorage.getItem('beach_admin_session') === '1') enterApp();
 }
 
 // ---------------- TABS ----------------
@@ -374,13 +374,6 @@ async function loadOrders(){
   orders=ordersData||[];
   const ids = orders.map(o=>o.id);
   const { data: oiData } = await sb.from('order_items').select('*').in('order_id', ids.length?ids:['00000000-0000-0000-0000-000000000000']);
-  const { data: msgData, error: msgError } = await sb.from('messages').select('id,order_id,sender,body,created_at').in('order_id', ids.length?ids:['00000000-0000-0000-0000-000000000000']).order('created_at',{ascending:true});
-  if(msgError) console.error(msgError);
-  messageSummaryMap = {};
-  (msgData||[]).forEach(m=>{
-    if(!messageSummaryMap[m.order_id]) messageSummaryMap[m.order_id]=[];
-    messageSummaryMap[m.order_id].push(m);
-  });
   orderItemsMap = {};
   (oiData||[]).forEach(oi=>{ if(!orderItemsMap[oi.order_id]) orderItemsMap[oi.order_id]=[]; orderItemsMap[oi.order_id].push(oi); });
   renderOrders();
