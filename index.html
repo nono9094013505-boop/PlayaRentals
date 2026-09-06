@@ -570,7 +570,13 @@ async function sendCustomerMessage(){
   const body = input.value.trim();
   if(!body || !dashOrderId) return;
   input.value = '';
-  await sb.from('messages').insert({ order_id: dashOrderId, sender:'client', body });
+  const { error } = await sb.from('messages').insert({
+    order_id: dashOrderId,
+    client_uid: customerToken,
+    sender:'client',
+    body
+  });
+  if(error){ alert('No se pudo enviar el mensaje.'); return; }
   await loadCustomerMessages(dashOrderId);
 }
 
