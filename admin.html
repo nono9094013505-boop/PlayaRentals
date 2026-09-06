@@ -87,7 +87,6 @@
   .login-card input{width:100%;padding:14px;border-radius:12px;border:1px solid #DDD3BB;font-size:16px;text-align:center;margin-bottom:12px;}
   .login-card button{width:100%;background:var(--coral);color:white;border:none;border-radius:12px;padding:14px;font-weight:700;font-size:15px;cursor:pointer;}
   .login-error{color:var(--red);font-size:12px;margin-top:8px;height:14px;}
-  .super-tag{display:inline-block;background:var(--sun);color:var(--teal-deep);font-size:10px;font-weight:800;padding:2px 8px;border-radius:999px;margin-left:6px;vertical-align:middle;}
   .danger-zone{border:2px dashed #F3C3C3;border-radius:16px;padding:16px;margin-top:16px;}
   .danger-zone h3{color:var(--red);font-family:'Fraunces',serif;font-size:15px;margin:0 0 6px;}
   .danger-zone p{font-size:12px;color:var(--grey);margin:0 0 10px;}
@@ -136,7 +135,7 @@
 <div id="appScreen" class="hidden">
 <header>
   <div>
-    <div class="title">Panel de Administración <span id="superTag" class="super-tag hidden">SUPER</span></div>
+    <div class="title">Panel de Administración</div>
     <div class="date" id="todayLabel"></div>
   </div>
   <button class="logout-btn" onclick="logout()">Salir</button>
@@ -237,12 +236,11 @@
     <div class="section-title">Cambiar contraseña</div>
     <div class="card">
       <div class="add-row">
-        <input type="password" id="newAdminPassword" placeholder="Nueva contraseña de admin">
-        <button onclick="changeAdminPassword()">Guardar</button>
+        <input type="password" id="currentBuyerPassword" placeholder="Contraseña actual">
       </div>
-      <div id="superPassRow" class="add-row hidden">
-        <input type="password" id="newSuperPassword" placeholder="Nueva contraseña de super admin">
-        <button onclick="changeSuperPassword()">Guardar</button>
+      <div class="add-row">
+        <input type="password" id="newBuyerPassword" placeholder="Nueva contraseña">
+        <button onclick="changeBuyerPassword()">Guardar</button>
       </div>
       <div class="login-error" id="passChangeMsg" style="height:auto;margin-top:6px;"></div>
     </div>
@@ -304,8 +302,7 @@ const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 const today = new Intl.DateTimeFormat('en-CA',{year:'numeric',month:'2-digit',day:'2-digit'}).format(new Date());
 document.getElementById('todayLabel').textContent = new Date().toLocaleDateString('es-MX', { weekday:'long', year:'numeric', month:'long', day:'numeric' });
 
-let orders = [], items = [], workers = [], orderItemsMap = {}, adminSettings = null;
-let isSuperAdmin = false;
+let orders = [], items = [], workers = [], orderItemsMap = {};
 let openMsgOrderId = null;
 let msgSub = null;
 let countdownInterval = null;
@@ -315,25 +312,22 @@ let messageSummaryMap = {};
 // ---------------- LOGIN ----------------
 async function doLogin(){
   const pw = document.getElementById('loginPassword').value;
-  const { data, error } = await sb.from('admin_settings').select('*').eq('id', 1).single();
-  if(error || !data){ document.getElementById('loginError').textContent = 'Error de conexión'; return; }
-  adminSettings = data;
-  if(pw === data.super_password){
-    isSuperAdmin = true;
-    enterApp();
-  } else {
+  const { data, error } = await sb.rpc('check_admin_password', { p_password: pw });
+  const result = Array.isArray(data) ? data[0] : data;
+  if(error || !result?.authenticated){
     document.getElementById('loginError').textContent = 'Contraseña incorrecta';
+    return;
   }
+  document.getElementById('loginPassword').value = '';
+  sessionStorage.setItem('beach_admin_session', '1');
+  enterApp();
 }
 
 function enterApp(){
-  localStorage.setItem('beach_admin_logged_in', isSuperAdmin ? 'super' : 'admin');
   document.getElementById('loginScreen').classList.add('hidden');
   document.getElementById('appScreen').classList.remove('hidden');
-  document.getElementById('superTag').classList.toggle('hidden', !isSuperAdmin);
-  document.getElementById('resetZone').classList.toggle('hidden', !isSuperAdmin);
-  document.getElementById('endDayZone').classList.toggle('hidden', !isSuperAdmin);
-  document.getElementById('superPassRow').classList.toggle('hidden', !isSuperAdmin);
+  document.getElementById('resetZone').classList.remove('hidden');
+  document.getElementById('endDayZone').classList.remove('hidden');
   loadAll().then(()=>{
     if(items.length === 0) showWizard();
     else if(!localStorage.getItem('beach_admin_tutorial_seen')) startAdminTutorial();
@@ -343,20 +337,13 @@ function enterApp(){
 }
 
 function logout(){
-  localStorage.removeItem('beach_admin_logged_in');
+  sessionStorage.removeItem('beach_admin_session');
   location.reload();
 }
 
 function checkSession(){
-  const s = localStorage.getItem('beach_admin_logged_in');
-  if(s){
-    isSuperAdmin = (s === 'super');
-    sb.from('admin_settings').select('*').eq('id',1).single().then(({data,error})=>{
-      if(error || !data){ localStorage.removeItem('beach_admin_logged_in'); document.getElementById('loginError').textContent='No se pudo conectar con la configuración. Inicia sesión de nuevo.'; return; }
-      adminSettings = data;
-      enterApp();
-    });
-  }
+  localStorage.removeItem('beach_admin_logged_in');
+  if(sessionStorage.getItem('beach_admin_session') === '1') enterApp();
 }
 
 // ---------------- TABS ----------------
@@ -622,7 +609,13 @@ async function sendAdminMessage(orderId){
   const body = input.value.trim();
   if(!body) return;
   input.value = '';
-  await sb.from('messages').insert({ order_id: orderId, sender:'admin', body });
+  let clientUid = orders.find(o=>o.id===orderId)?.client_uid;
+  if(!clientUid){
+    const { data: order } = await sb.from('orders').select('client_uid').eq('id', orderId).single();
+    clientUid = order?.client_uid || orderId;
+  }
+  const { error } = await sb.from('messages').insert({ order_id: orderId, client_uid: clientUid, sender:'admin', body });
+  if(error){ alert('No se pudo enviar el mensaje.'); return; }
   await loadMessagesForOrder(orderId);
 }
 
@@ -870,31 +863,25 @@ function showPassChangeMsg(text, isError){
   setTimeout(()=>{ el.textContent = ''; }, 4000);
 }
 
-async function changeAdminPassword(){
-  const input = document.getElementById('newAdminPassword');
-  const val = input.value.trim();
-  if(val.length < 4){ showPassChangeMsg('Mínimo 4 caracteres.', true); return; }
-  const { error } = await sb.from('admin_settings').update({ password: val }).eq('id', 1);
-  if(error){ showPassChangeMsg('Error al guardar.', true); return; }
-  adminSettings.password = val;
-  input.value = '';
-  showPassChangeMsg('Contraseña de admin actualizada.', false);
-}
+async function changeBuyerPassword(){
+  const currentInput = document.getElementById('currentBuyerPassword');
+  const newInput = document.getElementById('newBuyerPassword');
+  const currentPassword = currentInput.value;
+  const newPassword = newInput.value.trim();
+  if(newPassword.length < 4){ showPassChangeMsg('Mínimo 4 caracteres.', true); return; }
 
-async function changeSuperPassword(){
-  if(!isSuperAdmin) return;
-  const input = document.getElementById('newSuperPassword');
-  const val = input.value.trim();
-  if(val.length < 4){ showPassChangeMsg('Mínimo 4 caracteres.', true); return; }
-  const { error } = await sb.from('admin_settings').update({ super_password: val }).eq('id', 1);
-  if(error){ showPassChangeMsg('Error al guardar.', true); return; }
-  adminSettings.super_password = val;
-  input.value = '';
-  showPassChangeMsg('Contraseña de super admin actualizada.', false);
+  const { data, error } = await sb.rpc('change_buyer_password', {
+    p_current_password: currentPassword,
+    p_new_password: newPassword
+  });
+  if(error || !data){ showPassChangeMsg('No se pudo actualizar la contraseña.', true); return; }
+
+  currentInput.value = '';
+  newInput.value = '';
+  showPassChangeMsg('Contraseña actualizada.', false);
 }
 
 async function resetAllData(){
-  if(!isSuperAdmin) return;
   if(!confirm('⚠️ BORRAR TODO: esto eliminará pedidos, artículos del inventario, trabajadores, mensajes y llamadas de servicio. La aplicación quedará vacía. ¿Continuar?')) return;
   const phrase = prompt('Escribe BORRAR TODO para confirmar:');
   if(phrase !== 'BORRAR TODO') { alert('Cancelado. No se borró nada.'); return; }
@@ -923,7 +910,6 @@ async function resetAllData(){
 
 // ---------------- END DAY / HISTORY ----------------
 async function endDay(){
-  if(!isSuperAdmin) return;
   if(!confirm('¿Terminar el día de hoy? Esto guarda el resumen en el historial, regresa todo el inventario, y prepara a los trabajadores para el día siguiente.')) return;
 
   // 1. Snapshot today's summary before resetting anything
