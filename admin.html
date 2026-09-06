@@ -308,6 +308,25 @@ let msgSub = null;
 let countdownInterval = null;
 let messagePollInterval = null;
 let messageSummaryMap = {};
+let ordersLoadedOnce = false;
+
+function showNewOrderAlert(count){
+  const existing = document.getElementById('newOrderAlert');
+  if(existing) existing.remove();
+
+  const notice = document.createElement('div');
+  notice.id = 'newOrderAlert';
+  notice.textContent = count === 1 ? '🔔 Nuevo pedido recibido' : `🔔 ${count} pedidos nuevos recibidos`;
+  Object.assign(notice.style, {
+    position:'fixed', top:'72px', left:'50%', transform:'translateX(-50%)',
+    zIndex:'4000', background:'var(--coral)', color:'white',
+    padding:'12px 18px', borderRadius:'12px', fontWeight:'800',
+    fontSize:'14px', boxShadow:'0 5px 18px rgba(0,0,0,.22)'
+  });
+  document.body.appendChild(notice);
+  if(navigator.vibrate) navigator.vibrate([180, 100, 180]);
+  setTimeout(()=>notice.remove(), 5000);
+}
 
 // ---------------- LOGIN ----------------
 async function doLogin(){
@@ -371,12 +390,19 @@ async function loadWorkers(){
 async function loadOrders(){
   const {data:ordersData,error:ordersError}=await sb.from('orders').select('*').eq('work_date',today).order('created_at',{ascending:false});
   if(ordersError){console.error(ordersError);return false;}
+  const previousOrderIds = new Set(orders.map(o=>o.id));
+  const shouldAlertForNewOrders = ordersLoadedOnce;
   orders=ordersData||[];
   const ids = orders.map(o=>o.id);
   const { data: oiData } = await sb.from('order_items').select('*').in('order_id', ids.length?ids:['00000000-0000-0000-0000-000000000000']);
   orderItemsMap = {};
   (oiData||[]).forEach(oi=>{ if(!orderItemsMap[oi.order_id]) orderItemsMap[oi.order_id]=[]; orderItemsMap[oi.order_id].push(oi); });
   renderOrders();
+  if(shouldAlertForNewOrders){
+    const newPendingOrders = orders.filter(o=>o.status==='pending' && !previousOrderIds.has(o.id));
+    if(newPendingOrders.length) showNewOrderAlert(newPendingOrders.length);
+  }
+  ordersLoadedOnce = true;
 }
 
 // ---------------- ORDERS (sorted: pending first, then soonest-ending delivered, then returned last) ----------------
